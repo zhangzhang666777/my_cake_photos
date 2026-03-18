@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>我的电子相册</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+        }
+        #container {
+            display: flex;
+            min-height: 100vh;
+        }
+        /* 左侧树形导航 */
+        #sidebar {
+            width: 260px;
+            background-color: #333;
+            color: white;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        #sidebar h2 {
+            margin-bottom: 20px;
+            font-size: 1.4em;
+            border-bottom: 2px solid #555;
+            padding-bottom: 10px;
+        }
+        .tree, .tree ul {
+            list-style: none;
+            margin: 0;
+            padding-left: 20px;
+        }
+        .tree li {
+            margin: 5px 0;
+            cursor: default;
+            user-select: none;
+        }
+        .tree .node-folder {
+            font-weight: bold;
+            color: #ddd;
+        }
+        .tree .node-leaf {
+            color: #aaa;
+        }
+        .tree .node-folder.clickable, .tree .node-leaf.clickable {
+            cursor: pointer;
+        }
+        .tree .node-folder.clickable:hover, .tree .node-leaf.clickable:hover {
+            color: white;
+        }
+        .tree .active {
+            background-color: #007bff;
+            color: white !important;
+            border-radius: 4px;
+            padding: 2px 5px;
+        }
+        .tree .toggle {
+            display: inline-block;
+            width: 16px;
+            text-align: center;
+            cursor: pointer;
+            color: #aaa;
+        }
+        .tree .toggle:hover {
+            color: white;
+        }
+        .tree .folder-content {
+            display: block;
+        }
+        .tree .folder-content.collapsed {
+            display: none;
+        }
+        /* 右侧主内容区 */
+        #main {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        #top-showcase {
+            background-color: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        #showcase-title {
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        #showcase-images {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            gap: 20px;
+        }
+        .showcase-item {
+            text-align: center;
+            flex: 1;
+        }
+        .showcase-item img {
+            width: 100%;
+            max-width: 200px;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .showcase-item p {
+            margin-top: 8px;
+            font-size: 0.9em;
+            color: #666;
+        }
+        #showcase-controls {
+            display: flex;
+            justify-content: center;
+            margin-top: 15px;
+        }
+        #showcase-controls button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            margin: 0 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        #showcase-controls button:hover {
+            background-color: #0056b3;
+        }
+        #showcase-controls button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        #gallery {
+            background-color: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            flex: 1;
+        }
+        .gallery-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+        }
+        .gallery-grid img {
+            width: 200px;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            cursor: pointer;
+            transition: box-shadow 0.2s;
+        }
+        .gallery-grid img:hover {
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+        }
+        .no-images {
+            text-align: center;
+            color: #999;
+            padding: 50px;
+            font-size: 1.2em;
+        }
+        #preview-container {
+            display: none;
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+            z-index: 1000;
+            max-width: 80vw;
+            max-height: 80vh;
+        }
+        #preview-img {
+            display: block;
+            max-width: 100%;
+            max-height: 70vh;
+            object-fit: contain;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <!-- 左侧树形分类导航 -->
+        <div id="sidebar">
+            <h2>相册分类</h2>
+            <ul class="tree" id="category-tree"></ul>
+        </div>
+
+        <!-- 右侧主内容区 -->
+        <div id="main">
+            <div id="top-showcase">
+                <div id="showcase-title">精选展示</div>
+                <div id="showcase-images"></div>
+                <div id="showcase-controls">
+                    <button id="prev-showcase" onclick="prevShowcase()">❮ 上一组</button>
+                    <button id="next-showcase" onclick="nextShowcase()">下一组 ❯</button>
+                </div>
+            </div>
+            <div id="gallery">
+                <div id="gallery-grid" class="gallery-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="preview-container">
+        <img id="preview-img" src="" alt="预览">
+    </div>
+
+    <script>
+        const treeData = [{"name": "千层", "rel_path": "千层", "images": ["Image_1773708812351_417.jpg", "Image_1773712190557_547.jpg", "Image_1773712190587_589.jpg", "Image_1773712190970_610.jpg", "Image_1773712191004_881.jpg", "Image_1773712194120_505.jpg", "Image_1773712194170_339.jpg", "Image_1773712194220_880.jpg", "Image_1773712194714_859.jpg", "Image_1773712194754_838.jpg", "Image_1773712195256_193.jpg", "Image_1773712195292_463.jpg", "Image_1773712195984_297.jpg", "Image_1773712196017_109.jpg", "Image_1773712197942_88.jpg", "Image_1773712197967_650.jpg", "Image_1773712198017_817.jpg", "Image_1773712198405_380.jpg", "Image_1773712198429_900.jpg", "Image_1773712198868_692.jpg", "Image_1773712198906_796.jpg", "Image_1773712199275_942.jpg", "Image_1773712199309_234.jpg", "Image_1773712199763_713.jpg", "Image_1773712202238_275.jpg", "Image_1773712202281_816.jpg", "Image_1773712202320_483.jpg", "Image_1773712202922_858.jpg", "Image_1773712202951_358.jpg", "Image_1773712203348_254.jpg", "Image_1773712203384_483.jpg", "Image_1773712203829_483.jpg", "Image_1773712203860_45.jpg", "Image_1773712204269_462.jpg", "Image_1773712204303_629.jpg", "Image_1773712204707_545.jpg", "Image_1773712204738_399.jpg", "Image_1773712205089_941.jpg", "Image_1773712205806_691.jpg", "Image_1773712205846_441.jpg", "Image_1773712206256_649.jpg", "Image_1773712206688_753.jpg", "Image_1773712206736_24.jpg", "Image_1773712206799_628.jpg", "Image_1773712207272_274.jpg"], "children": []}, {"name": "发财麻将", "rel_path": "发财麻将", "images": ["Image_1773713631859_890.jpg", "Image_1773713631915_390.jpg", "Image_1773713632815_411.jpg", "Image_1773713632868_432.jpg", "Image_1773713633411_702.jpg", "Image_1773713633451_556.jpg", "Image_1773713634195_640.jpg", "Image_1773713634237_77.jpg", "Image_1773713635623_369.jpg", "Image_1773713635669_389.jpg", "Image_1773713636328_785.jpg", "Image_1773713636368_223.jpg", "Image_1773713637208_598.jpg", "Image_1773713637251_598.jpg", "Image_1773713637863_827.jpg", "Image_1773713637902_722.jpg", "Image_1773713638589_639.jpg", "Image_1773713638634_556.jpg", "Image_1773713639222_389.jpg", "Image_1773713639270_972.jpg", "Image_1773713639302_201.jpg", "Image_1773713640018_264.jpg", "Image_1773713640055_555.jpg", "Image_1773713640889_264.jpg", "Image_1773713640945_972.jpg", "Image_1773713641471_451.jpg", "Image_1773713641518_493.jpg", "Image_1773713642416_826.jpg", "Image_1773713642448_993.jpg", "Image_1773713642487_13.jpg", "Image_1773713643227_409.jpg", "Image_1773713643270_826.jpg", "Image_1773713643782_867.jpg", "Image_1773713643823_951.jpg", "Image_1773713644346_326.jpg", "Image_1773713644397_909.jpg", "Image_1773713645126_763.jpg", "Image_1773713645170_388.jpg", "Image_1773713645212_742.jpg", "Image_1773713645754_284.jpg", "Image_1773713646193_825.jpg", "Image_1773713646232_867.jpg", "Image_1773713646986_96.jpg", "Image_1773713647043_784.jpg", "Image_1773713647450_638.jpg", "Image_1773713647494_13.jpg"], "children": []}, {"name": "女童", "rel_path": "女童", "images": [], "children": [{"name": "公主类型", "rel_path": "女童/公主类型", "images": ["女童公主1.jpg", "女童公主10.jpg", "女童公主11.jpg", "女童公主12.jpg", "女童公主13.jpg", "女童公主14.jpg", "女童公主15.jpg", "女童公主16.jpg", "女童公主17.jpg", "女童公主18.jpg", "女童公主19.jpg", "女童公主2.jpg", "女童公主20.jpg", "女童公主21.jpg", "女童公主22.jpg", "女童公主23.jpg", "女童公主24.jpg", "女童公主25.jpg", "女童公主26.jpg", "女童公主27.jpg", "女童公主28.jpg", "女童公主29.jpg", "女童公主3.jpg", "女童公主30.jpg", "女童公主31.jpg", "女童公主32.jpg", "女童公主33.jpg", "女童公主34.jpg", "女童公主35.jpg", "女童公主36.jpg", "女童公主37.jpg", "女童公主38.jpg", "女童公主39.jpg", "女童公主4.jpg", "女童公主40.jpg", "女童公主41.jpg", "女童公主42.jpg", "女童公主43.jpg", "女童公主44.jpg", "女童公主45.jpg", "女童公主46.jpg", "女童公主47.jpg", "女童公主48.jpg", "女童公主49.jpg", "女童公主5.jpg", "女童公主50.jpg", "女童公主51.jpg", "女童公主52.jpg", "女童公主53.jpg", "女童公主54.jpg", "女童公主55.jpg", "女童公主56.jpg", "女童公主57.jpg", "女童公主58.jpg", "女童公主59.jpg", "女童公主6.jpg", "女童公主60.jpg", "女童公主61.jpg", "女童公主62.jpg", "女童公主63.jpg", "女童公主64.jpg", "女童公主65.jpg", "女童公主66.jpg", "女童公主67.jpg", "女童公主68.jpg", "女童公主69.jpg", "女童公主7.jpg", "女童公主70.jpg", "女童公主8.jpg", "女童公主9.jpg"], "children": []}, {"name": "创意造型", "rel_path": "女童/创意造型", "images": ["女童创意01.jpg", "女童创意02.jpg", "女童创意03.jpg", "女童创意04.jpg", "女童创意05.jpg", "女童创意06.jpg", "女童创意07.jpg", "女童创意08.jpg", "女童创意09.jpg", "女童创意10.jpg", "女童创意11.jpg", "女童创意12.jpg", "女童创意13.jpg", "女童创意14.jpg", "女童创意15.jpg", "女童创意16.jpg", "女童创意17.jpg", "女童创意18.jpg", "女童创意19.jpg", "女童创意20.jpg", "女童创意21.jpg", "女童创意22.jpg", "女童创意23.jpg", "女童创意25.jpg", "女童创意26.jpg", "女童创意27.jpg", "女童创意28.jpg", "女童创意29.jpg", "女童创意30.jpg", "女童创意31.jpg", "女童创意32.jpg", "女童创意33.jpg", "女童创意34.jpg", "女童创意35.jpg", "女童创意36.jpg", "女童创意37.jpg", "女童创意38.jpg", "女童创意39.jpg"], "children": []}, {"name": "动漫公仔", "rel_path": "女童/动漫公仔", "images": ["女童公仔01.jpg", "女童公仔02.jpg", "女童公仔03.jpg", "女童公仔04.jpg", "女童公仔05.jpg", "女童公仔06.jpg", "女童公仔07.jpg", "女童公仔08.jpg", "女童公仔09.jpg", "女童公仔10.jpg", "女童公仔100.jpg", "女童公仔101.jpg", "女童公仔102.jpg", "女童公仔103.jpg", "女童公仔104.jpg", "女童公仔105.jpg", "女童公仔106.jpg", "女童公仔107.jpg", "女童公仔108.jpg", "女童公仔109.jpg", "女童公仔11.jpg", "女童公仔110.jpg", "女童公仔111.jpg", "女童公仔112.jpg", "女童公仔113.jpg", "女童公仔114.jpg", "女童公仔115.jpg", "女童公仔116.jpg", "女童公仔12.jpg", "女童公仔13.jpg", "女童公仔14.jpg", "女童公仔15.jpg", "女童公仔16.jpg", "女童公仔17.jpg", "女童公仔18.jpg", "女童公仔19.jpg", "女童公仔20.jpg", "女童公仔21.jpg", "女童公仔22.jpg", "女童公仔23.jpg", "女童公仔24.jpg", "女童公仔25.jpg", "女童公仔26.jpg", "女童公仔27.jpg", "女童公仔28.jpg", "女童公仔29.jpg", "女童公仔30.jpg", "女童公仔31.jpg", "女童公仔32.jpg", "女童公仔33.jpg", "女童公仔34.jpg", "女童公仔35.jpg", "女童公仔36.jpg", "女童公仔37.jpg", "女童公仔38.jpg", "女童公仔39.jpg", "女童公仔40.jpg", "女童公仔41.jpg", "女童公仔42.jpg", "女童公仔43.jpg", "女童公仔45.jpg", "女童公仔46.jpg", "女童公仔47.jpg", "女童公仔48.jpg", "女童公仔49.jpg", "女童公仔50.jpg", "女童公仔51.jpg", "女童公仔52.jpg", "女童公仔53.jpg", "女童公仔54.jpg", "女童公仔55.jpg", "女童公仔56.jpg", "女童公仔57.jpg", "女童公仔58.jpg", "女童公仔59.jpg", "女童公仔60.jpg", "女童公仔61.jpg", "女童公仔62.jpg", "女童公仔63.jpg", "女童公仔64.jpg", "女童公仔65.jpg", "女童公仔66.jpg", "女童公仔67.jpg", "女童公仔68.jpg", "女童公仔69.jpg", "女童公仔70.jpg", "女童公仔71.jpg", "女童公仔72.jpg", "女童公仔73.jpg", "女童公仔74.jpg", "女童公仔75.jpg", "女童公仔76.jpg", "女童公仔77.jpg", "女童公仔78.jpg", "女童公仔79.jpg", "女童公仔80.jpg", "女童公仔81.jpg", "女童公仔82.jpg", "女童公仔83.jpg", "女童公仔84.jpg", "女童公仔85.jpg", "女童公仔86.jpg", "女童公仔87.jpg", "女童公仔88.jpg", "女童公仔89.jpg", "女童公仔90.jpg", "女童公仔91.jpg", "女童公仔92.jpg", "女童公仔93.jpg", "女童公仔94.jpg", "女童公仔95.jpg", "女童公仔96.jpg", "女童公仔97.jpg", "女童公仔98.jpg", "女童公仔99.jpg"], "children": []}, {"name": "简单手绘", "rel_path": "女童/简单手绘", "images": ["女童手绘1.jpg", "女童手绘10.jpg", "女童手绘11.jpg", "女童手绘12.jpg", "女童手绘13.jpg", "女童手绘14.jpg", "女童手绘2.jpg", "女童手绘3.jpg", "女童手绘4.jpg", "女童手绘5.jpg", "女童手绘6.jpg", "女童手绘7.jpg", "女童手绘8.jpg", "女童手绘9.jpg"], "children": []}, {"name": "翻糖皮巧克力配件", "rel_path": "女童/翻糖皮巧克力配件", "images": ["女童翻糖巧01.jpg", "女童翻糖巧02.jpg", "女童翻糖巧03.jpg", "女童翻糖巧04.jpg", "女童翻糖巧05.jpg", "女童翻糖巧06.jpg", "女童翻糖巧07.jpg", "女童翻糖巧08.jpg", "女童翻糖巧09.jpg", "女童翻糖巧10.jpg", "女童翻糖巧11.jpg", "女童翻糖巧12.jpg", "女童翻糖巧13.jpg", "女童翻糖巧14.jpg", "女童翻糖巧15.jpg", "女童翻糖巧16.jpg", "女童翻糖巧17.jpg", "女童翻糖巧18.jpg", "女童翻糖巧19.jpg", "女童翻糖巧20.jpg", "女童翻糖巧21.jpg", "女童翻糖巧22.jpg", "女童翻糖巧23.jpg", "女童翻糖巧24.jpg", "女童翻糖巧25.jpg", "女童翻糖巧26.jpg", "女童翻糖巧27.jpg"], "children": []}]}, {"name": "妈妈款", "rel_path": "妈妈款", "images": ["Image_1773713458474_333.jpg", "Image_1773713458534_62.jpg", "Image_1773713458916_479.jpg", "Image_1773713458955_687.jpg", "Image_1773713459490_354.jpg", "Image_1773713459525_750.jpg", "Image_1773713460100_645.jpg", "Image_1773713460160_291.jpg", "Image_1773713460775_854.jpg", "Image_1773713460815_895.jpg", "Image_1773713461605_895.jpg", "Image_1773713461640_145.jpg", "Image_1773713462164_728.jpg", "Image_1773713462204_916.jpg", "Image_1773713462824_853.jpg", "Image_1773713462862_103.jpg", "Image_1773713463894_999.jpg", "Image_1773713463915_311.jpg", "Image_1773713464901_749.jpg", "Image_1773713464927_415.jpg", "Image_1773713464939_436.jpg", "Image_1773713465531_770.jpg", "Image_1773713465573_686.jpg", "Image_1773713466041_499.jpg"], "children": []}, {"name": "年轻女士", "rel_path": "年轻女士", "images": ["Image_1773712372262_728.jpg", "Image_1773712372291_541.jpg", "Image_1773712372807_832.jpg", "Image_1773712372844_603.jpg", "Image_1773712373286_645.jpg", "Image_1773712373322_165.jpg", "Image_1773712373824_290.jpg", "Image_1773712373863_707.jpg", "Image_1773712374333_603.jpg", "Image_1773712374388_82.jpg", "Image_1773712374402_394.jpg", "Image_1773712374954_353.jpg", "Image_1773712374994_394.jpg", "Image_1773712375579_248.jpg", "Image_1773712375627_873.jpg", "Image_1773712376116_748.jpg", "Image_1773712376158_248.jpg", "Image_1773712379415_748.jpg", "Image_1773712379456_39.jpg", "Image_1773712379487_394.jpg", "Image_1773712380557_581.jpg", "Image_1773712380598_706.jpg", "Image_1773712382384_747.jpg", "Image_1773712382448_643.jpg", "Image_1773712382978_643.jpg", "Image_1773712383005_747.jpg", "Image_1773712383522_955.jpg", "Image_1773712383558_476.jpg", "Image_1773712386604_872.jpg", "Image_1773712386657_976.jpg", "Image_1773712386663_830.jpg", "Image_1773712387388_913.jpg", "Image_1773712387420_913.jpg", "Image_1773712388255_559.jpg", "Image_1773712388289_642.jpg", "Image_1773712388323_309.jpg", "Image_1773712388886_684.jpg", "Image_1773712388922_934.jpg", "Image_1773712389894_934.jpg", "Image_1773712389931_225.jpg", "Image_1773712391635_79.jpg", "Image_1773712391710_850.jpg", "Image_1773712392612_871.jpg", "Image_1773712392682_454.jpg", "Image_1773712393319_808.jpg", "Image_1773712393355_100.jpg", "Image_1773712393889_871.jpg", "Image_1773712393895_579.jpg", "Image_1773712500710_438.jpg", "Image_1773712500785_625.jpg", "Image_1773712500843_542.jpg", "Image_1773712501605_521.jpg", "Image_1773712501658_542.jpg", "Image_1773712502124_875.jpg", "Image_1773712502158_104.jpg", "Image_1773712502573_0.jpg", "Image_1773712502610_708.jpg", "Image_1773712503202_250.jpg", "Image_1773712503248_146.jpg", "Image_1773712503251_125.jpg", "Image_1773712504722_291.jpg", "Image_1773712504756_374.jpg", "Image_1773712504767_145.jpg", "Image_1773712505470_999.jpg", "Image_1773712505504_333.jpg", "Image_1773712506257_437.jpg", "Image_1773712506296_562.jpg", "Image_1773712506637_708.jpg", "Image_1773712506674_208.jpg", "Image_1773712507204_874.jpg", "Image_1773712507243_707.jpg", "Image_1773712508489_603.jpg", "Image_1773712508530_332.jpg", "Image_1773712508571_895.jpg", "Image_1773712509586_999.jpg", "Image_1773712509628_145.jpg", "Image_1773712510985_540.jpg", "Image_1773712511029_707.jpg", "Image_1773712511056_61.jpg", "Image_1773712512479_811.jpg", "Image_1773712512522_227.jpg", "Image_1773712512527_665.jpg", "Image_1773712513121_936.jpg", "Image_1773712513161_61.jpg", "Image_1773712513641_602.jpg", "Image_1773712513682_81.jpg", "Image_1773712514153_311.jpg", "Image_1773712514190_248.jpg", "Image_1773712514611_685.jpg", "Image_1773712514650_644.jpg", "Image_1773712516254_394.jpg", "Image_1773712516266_414.jpg", "Image_1773712516312_331.jpg", "Image_1773712516814_685.jpg", "Image_1773712516851_831.jpg", "Image_1773712517081_893.jpg", "Image_1773712604536_630.jpg", "Image_1773712604555_776.jpg", "Image_1773712605053_943.jpg", "Image_1773712605076_380.jpg", "Image_1773712605646_526.jpg", "Image_1773712605679_442.jpg", "Image_1773712606288_109.jpg", "Image_1773712608968_775.jpg", "Image_1773712608981_463.jpg", "Image_1773712609005_963.jpg", "Image_1773712609561_254.jpg", "Image_1773712609599_213.jpg", "Image_1773712610056_546.jpg", "Image_1773712610094_546.jpg", "Image_1773712611937_337.jpg", "Image_1773712611951_254.jpg", "Image_1773712612638_566.jpg", "Image_1773712612682_483.jpg", "Image_1773712614086_191.jpg", "Image_1773712614122_66.jpg", "Image_1773712614136_899.jpg", "Image_1773712614821_379.jpg", "Image_1773712614856_774.jpg", "Image_1773712616667_420.jpg", "Image_1773712616740_628.jpg", "Image_1773712617844_691.jpg", "Image_1773712617887_586.jpg", "Image_1773712618322_815.jpg", "Image_1773712618361_399.jpg", "Image_1773712618813_586.jpg", "Image_1773712618860_149.jpg", "Image_1773712619685_24.jpg", "Image_1773712619725_607.jpg", "Image_1773712621652_773.jpg", "Image_1773712621667_815.jpg", "Image_1773712621735_107.jpg", "Image_1773712623551_231.jpg", "Image_1773712623610_502.jpg", "Image_1773712624180_648.jpg", "Image_1773712624223_585.jpg", "Image_1773712625364_689.jpg", "Image_1773712625453_231.jpg", "Image_1773712627039_752.jpg", "Image_1773712627080_918.jpg", "Image_1773712627498_668.jpg", "Image_1773712627559_960.jpg", "Image_1773712627940_772.jpg", "Image_1773712627972_502.jpg", "Image_1773712628413_106.jpg", "Image_1773712743748_276.jpg", "Image_1773712744322_525.jpg", "Image_1773712744363_630.jpg", "Image_1773712744864_713.jpg", "Image_1773712744914_275.jpg", "Image_1773712745310_25.jpg", "Image_1773712745352_150.jpg", "Image_1773712745388_379.jpg", "Image_1773712745829_775.jpg", "Image_1773712745872_442.jpg", "Image_1773712746358_588.jpg", "Image_1773712746395_525.jpg", "Image_1773712746827_629.jpg", "Image_1773712746858_108.jpg", "Image_1773712747301_608.jpg", "Image_1773712747341_962.jpg", "Image_1773712748090_442.jpg", "Image_1773712748131_733.jpg", "Image_1773712748481_608.jpg", "Image_1773712748519_171.jpg", "Image_1773712748923_66.jpg", "Image_1773712748946_25.jpg", "Image_1773712749348_795.jpg", "Image_1773712749364_650.jpg", "Image_1773712749723_254.jpg", "Image_1773712749750_629.jpg", "Image_1773712750450_66.jpg", "Image_1773712750454_274.jpg", "Image_1773712750492_795.jpg", "Image_1773712751107_587.jpg", "Image_1773712751142_712.jpg", "Image_1773712751540_358.jpg", "Image_1773712751588_149.jpg", "Image_1773712751926_87.jpg", "Image_1773712751965_899.jpg", "Image_1773712752337_66.jpg", "Image_1773712752376_170.jpg", "Image_1773712752851_66.jpg", "Image_1773712752880_962.jpg", "Image_1773712753384_295.jpg", "Image_1773712753389_795.jpg", "Image_1773712753430_837.jpg", "Image_1773712754289_691.jpg", "Image_1773712754348_316.jpg", "Image_1773712754750_565.jpg", "Image_1773712754796_170.jpg", "Image_1773712755186_232.jpg", "Image_1773712755319_440.jpg", "Image_1773712836678_365.jpg", "Image_1773712836708_136.jpg", "Image_1773712837085_845.jpg", "Image_1773712837124_407.jpg", "Image_1773712837703_324.jpg", "Image_1773712837741_803.jpg", "Image_1773712837747_782.jpg", "Image_1773712838195_886.jpg", "Image_1773712838231_94.jpg", "Image_1773712838652_490.jpg", "Image_1773712838700_511.jpg", "Image_1773712839113_657.jpg", "Image_1773712839147_32.jpg", "Image_1773712839509_782.jpg", "Image_1773712839546_803.jpg", "Image_1773712839999_657.jpg", "Image_1773712840037_52.jpg", "Image_1773712840088_782.jpg", "Image_1773712840706_615.jpg", "Image_1773712840744_344.jpg", "Image_1773712841146_886.jpg", "Image_1773712841197_136.jpg", "Image_1773712841615_219.jpg", "Image_1773712841671_886.jpg", "Image_1773712842128_10.jpg", "Image_1773712842180_448.jpg", "Image_1773712842559_260.jpg", "Image_1773712842591_781.jpg", "Image_1773712842979_677.jpg", "Image_1773712843011_94.jpg", "Image_1773712843611_114.jpg", "Image_1773712843616_802.jpg", "Image_1773712843653_677.jpg", "Image_1773712844271_781.jpg", "Image_1773712844310_239.jpg", "Image_1773712844783_843.jpg", "Image_1773712844823_718.jpg", "Image_1773712845279_448.jpg", "Image_1773712845323_385.jpg", "Image_1773712845668_10.jpg", "Image_1773712845726_739.jpg", "Image_1773712846128_385.jpg", "Image_1773712846169_364.jpg", "Image_1773712846588_447.jpg", "Image_1773712846617_72.jpg", "Image_1773712846622_281.jpg", "Image_1773712847087_781.jpg", "Image_1773712847124_885.jpg", "Image_1773712847449_572.jpg", "Image_1773712847466_843.jpg", "Image_1773712980768_677.jpg", "Image_1773712980797_594.jpg", "Image_1773712981197_614.jpg", "Image_1773712981233_781.jpg", "Image_1773712981583_677.jpg", "Image_1773712981622_656.jpg", "Image_1773712982303_31.jpg", "Image_1773712982348_781.jpg", "Image_1773712983027_489.jpg", "Image_1773712983067_176.jpg", "Image_1773712983506_72.jpg", "Image_1773712983562_322.jpg", "Image_1773712984116_72.jpg", "Image_1773712984137_385.jpg", "Image_1773712984155_864.jpg", "Image_1773712984686_551.jpg", "Image_1773712984723_239.jpg", "Image_1773712985318_343.jpg", "Image_1773712985354_447.jpg", "Image_1773712985359_239.jpg", "Image_1773712986164_280.jpg", "Image_1773712986203_968.jpg", "Image_1773712986812_572.jpg", "Image_1773712986850_926.jpg", "Image_1773712987392_280.jpg", "Image_1773712987399_967.jpg", "Image_1773712987433_342.jpg", "Image_1773712988440_9.jpg", "Image_1773712988484_9.jpg", "Image_1773712988890_571.jpg", "Image_1773712988926_634.jpg", "Image_1773712989467_467.jpg", "Image_1773712989487_342.jpg", "Image_1773712989510_946.jpg", "Image_1773712990234_592.jpg", "Image_1773712990275_800.jpg", "Image_1773712990278_571.jpg", "Image_1773712990929_529.jpg", "Image_1773712990973_800.jpg", "Image_1773712991365_613.jpg", "Image_1773712991418_904.jpg", "Image_1773712991820_342.jpg", "Image_1773712991872_404.jpg", "Image_1773712992519_488.jpg", "Image_1773712992522_946.jpg", "Image_1773712992574_675.jpg", "Image_1773712993288_529.jpg", "Image_1773712993332_92.jpg", "Image_1773712993457_946.jpg", "Image_1773712993972_862.jpg", "Image_1773713074253_767.jpg", "Image_1773713074288_454.jpg", "Image_1773713074616_621.jpg", "Image_1773713074646_454.jpg", "Image_1773713075047_433.jpg", "Image_1773713075097_558.jpg", "Image_1773713075494_871.jpg", "Image_1773713075533_579.jpg", "Image_1773713075947_350.jpg", "Image_1773713075990_246.jpg", "Image_1773713076569_412.jpg", "Image_1773713076585_933.jpg", "Image_1773713076612_412.jpg", "Image_1773713077080_600.jpg", "Image_1773713077120_370.jpg", "Image_1773713077490_266.jpg", "Image_1773713077529_766.jpg", "Image_1773713077954_766.jpg", "Image_1773713077994_808.jpg", "Image_1773713078446_599.jpg", "Image_1773713078451_141.jpg", "Image_1773713078493_724.jpg"], "children": []}, {"name": "慕斯", "rel_path": "慕斯", "images": ["default (1).jpeg", "default (2).jpeg", "default.jpeg", "mmexport1773400325215.jpg", "mmexport1773400568902.jpg", "mmexport1773400577201.jpg", "mmexport1773652309478.jpg", "mmexport1773652316325.jpg"], "children": []}, {"name": "水果", "rel_path": "水果", "images": ["Image_1773708391547_585.jpg", "Image_1773710650974_970.jpg", "Image_1773710651034_886.jpg", "Image_1773710651483_95.jpg", "Image_1773710651522_678.jpg", "Image_1773710651990_907.jpg", "Image_1773710652034_532.jpg", "Image_1773710652562_386.jpg", "Image_1773710652613_407.jpg", "Image_1773710653501_32.jpg", "Image_1773710653544_219.jpg", "Image_1773710655966_657.jpg", "Image_1773710656015_698.jpg", "Image_1773710656085_136.jpg", "Image_1773710656546_281.jpg", "Image_1773710656592_781.jpg", "Image_1773710657011_677.jpg", "Image_1773710657061_406.jpg", "Image_1773710659944_573.jpg", "Image_1773710659975_677.jpg", "Image_1773710660000_698.jpg", "Image_1773710660578_385.jpg", "Image_1773710660611_843.jpg", "Image_1773710661107_197.jpg", "Image_1773710661150_531.jpg", "Image_1773710661645_677.jpg", "Image_1773710661682_406.jpg", "Image_1773710665329_322.jpg", "Image_1773710665390_384.jpg", "Image_1773710667746_717.jpg", "Image_1773710667816_71.jpg", "Image_1773710668783_530.jpg", "Image_1773710668844_884.jpg", "Image_1773710669228_300.jpg", "Image_1773710669270_321.jpg", "Image_1773710669823_363.jpg", "Image_1773710669867_550.jpg", "Image_1773710670292_29.jpg", "Image_1773710670334_467.jpg", "Image_1773710671626_946.jpg", "Image_1773710671679_29.jpg", "Image_1773710672568_842.jpg", "Image_1773710672640_258.jpg", "Image_1773710673067_258.jpg", "Image_1773710673108_466.jpg", "Image_1773710673539_571.jpg", "Image_1773710673562_612.jpg", "Image_1773710674177_466.jpg", "Image_1773710674214_50.jpg", "Image_1773710674227_883.jpg", "Image_1773711043718_493.jpg", "Image_1773711043758_597.jpg", "Image_1773711043770_389.jpg", "Image_1773711044275_347.jpg", "Image_1773711044312_14.jpg", "Image_1773711044834_764.jpg", "Image_1773711044876_14.jpg", "Image_1773711046014_326.jpg", "Image_1773711046022_972.jpg", "Image_1773711046052_555.jpg", "Image_1773711047504_784.jpg", "Image_1773711047554_951.jpg", "Image_1773711047600_722.jpg", "Image_1773711048223_722.jpg", "Image_1773711048254_951.jpg", "Image_1773711049663_826.jpg", "Image_1773711049717_680.jpg", "Image_1773711051175_513.jpg", "Image_1773711051239_117.jpg", "Image_1773711051981_388.jpg", "Image_1773711052029_346.jpg", "Image_1773711052447_804.jpg", "Image_1773711052501_638.jpg", "Image_1773711053745_804.jpg", "Image_1773711053786_513.jpg", "Image_1773711054240_971.jpg", "Image_1773711054290_304.jpg", "Image_1773711054916_158.jpg", "Image_1773711054945_512.jpg", "Image_1773711055521_33.jpg", "Image_1773711055532_929.jpg", "Image_1773711055574_866.jpg", "Image_1773711056187_596.jpg", "Image_1773711056224_991.jpg", "Image_1773711056643_741.jpg", "Image_1773711056685_720.jpg", "Image_1773711057081_429.jpg", "Image_1773711057128_116.jpg", "Image_1773711058098_595.jpg", "Image_1773711058145_429.jpg", "Image_1773711059211_553.jpg", "Image_1773711059233_803.jpg", "Image_1773711059260_970.jpg", "Image_1773711060394_220.jpg", "Image_1773711060424_32.jpg", "Image_1773711060463_303.jpg", "Image_1773711061152_178.jpg", "Image_1773711061173_116.jpg", "Image_1773711061790_199.jpg", "Image_1773711061842_220.jpg", "Image_1773711157433_372.jpg", "Image_1773711157467_393.jpg", "Image_1773711157482_393.jpg", "Image_1773711159118_996.jpg", "Image_1773711159150_851.jpg", "Image_1773711159157_38.jpg", "Image_1773711159789_726.jpg", "Image_1773711159826_413.jpg", "Image_1773711160266_580.jpg", "Image_1773711160309_871.jpg", "Image_1773711161067_392.jpg", "Image_1773711161108_100.jpg", "Image_1773711161155_996.jpg", "Image_1773711162632_558.jpg", "Image_1773711162645_663.jpg", "Image_1773711162672_142.jpg", "Image_1773711163288_79.jpg", "Image_1773711163320_642.jpg", "Image_1773711163901_829.jpg", "Image_1773711163938_433.jpg", "Image_1773711164322_100.jpg", "Image_1773711164361_266.jpg", "Image_1773711165838_225.jpg", "Image_1773711165859_870.jpg", "Image_1773711165880_870.jpg", "Image_1773711166662_391.jpg", "Image_1773711166694_474.jpg", "Image_1773711167124_58.jpg", "Image_1773711167157_787.jpg", "Image_1773711167538_308.jpg", "Image_1773711167576_974.jpg", "Image_1773711168012_391.jpg", "Image_1773711168050_849.jpg", "Image_1773711168585_849.jpg", "Image_1773711168614_349.jpg", "Image_1773711168626_683.jpg", "Image_1773711169219_99.jpg", "Image_1773711169263_787.jpg", "Image_1773711169740_974.jpg", "Image_1773711169772_578.jpg", "Image_1773711170403_578.jpg", "Image_1773711170409_953.jpg", "Image_1773711170444_99.jpg", "Image_1773711171842_515.jpg", "Image_1773711171875_807.jpg", "Image_1773711171886_557.jpg", "Image_1773711173346_703.jpg", "Image_1773711173393_703.jpg", "Image_1773711173399_182.jpg", "Image_1773711218333_112.jpg", "Image_1773711316963_889.jpg", "Image_1773711316988_868.jpg", "Image_1773711317327_576.jpg", "Image_1773711317358_931.jpg", "Image_1773711317718_97.jpg", "Image_1773711317757_639.jpg", "Image_1773711318210_451.jpg", "Image_1773711318247_889.jpg", "Image_1773711318650_785.jpg", "Image_1773711318693_368.jpg", "Image_1773711319076_555.jpg", "Image_1773711319113_76.jpg", "Image_1773711319515_389.jpg", "Image_1773711319546_993.jpg", "Image_1773711320259_639.jpg", "Image_1773711320294_701.jpg", "Image_1773711320934_701.jpg", "Image_1773711320967_138.jpg", "Image_1773711321009_347.jpg", "Image_1773711321570_97.jpg", "Image_1773711321607_76.jpg", "Image_1773711321961_555.jpg", "Image_1773711322006_597.jpg", "Image_1773711322405_242.jpg", "Image_1773711322449_680.jpg", "Image_1773711322945_992.jpg", "Image_1773711322974_617.jpg", "Image_1773711323479_201.jpg", "Image_1773711323512_346.jpg", "Image_1773711323520_638.jpg", "Image_1773711324165_659.jpg", "Image_1773711324216_367.jpg", "Image_1773711324917_763.jpg", "Image_1773711324951_388.jpg", "Image_1773711325365_450.jpg", "Image_1773711325400_888.jpg", "Image_1773711325748_492.jpg", "Image_1773711325802_221.jpg", "Image_1773711326240_950.jpg", "Image_1773711326277_346.jpg", "Image_1773711326871_658.jpg", "Image_1773711326900_742.jpg", "Image_1773711326911_283.jpg", "Image_1773711327502_762.jpg", "Image_1773711327540_450.jpg", "Image_1773711328113_575.jpg", "Image_1773711328167_200.jpg", "Image_1773711328700_825.jpg", "Image_1773711328735_471.jpg", "Image_1773711328843_908.jpg", "Image_1773711417772_82.jpg", "Image_1773711417833_332.jpg", "Image_1773711418256_978.jpg", "Image_1773711418302_957.jpg", "Image_1773711418732_999.jpg", "Image_1773711418769_749.jpg", "Image_1773711419307_561.jpg", "Image_1773711419311_144.jpg", "Image_1773711419346_894.jpg", "Image_1773711419841_165.jpg", "Image_1773711419879_269.jpg", "Image_1773711420278_248.jpg", "Image_1773711420312_894.jpg", "Image_1773711420701_957.jpg", "Image_1773711420729_61.jpg", "Image_1773711421154_290.jpg", "Image_1773711421190_977.jpg", "Image_1773711421851_581.jpg", "Image_1773711421866_894.jpg", "Image_1773711421891_40.jpg", "Image_1773711422525_831.jpg", "Image_1773711422556_873.jpg", "Image_1773711423127_727.jpg", "Image_1773711423166_915.jpg", "Image_1773711423573_789.jpg", "Image_1773711423608_852.jpg", "Image_1773711424016_852.jpg", "Image_1773711424060_727.jpg", "Image_1773711424502_373.jpg", "Image_1773711424536_685.jpg", "Image_1773711425026_227.jpg", "Image_1773711425038_873.jpg", "Image_1773711425069_123.jpg", "Image_1773711425511_852.jpg", "Image_1773711425548_289.jpg", "Image_1773711426007_331.jpg", "Image_1773711426048_643.jpg", "Image_1773711426433_518.jpg", "Image_1773711426478_310.jpg", "Image_1773711426976_643.jpg", "Image_1773711427021_851.jpg", "Image_1773711427440_810.jpg", "Image_1773711427479_789.jpg", "Image_1773711427995_247.jpg", "Image_1773711428036_893.jpg", "Image_1773711428042_955.jpg", "Image_1773711428553_560.jpg", "Image_1773711428591_914.jpg", "Image_1773711429062_997.jpg"], "children": []}, {"name": "爸爸款", "rel_path": "爸爸款", "images": ["Image_1773713250206_52.jpg", "Image_1773713250253_823.jpg", "Image_1773713250721_969.jpg", "Image_1773713250767_865.jpg", "Image_1773713254242_343.jpg", "Image_1773713254284_593.jpg", "Image_1773713255093_677.jpg", "Image_1773713255787_927.jpg", "Image_1773713255838_510.jpg", "Image_1773713256340_10.jpg", "Image_1773713256378_156.jpg", "Image_1773713257416_843.jpg", "Image_1773713257448_218.jpg", "Image_1773713258676_801.jpg", "Image_1773713258741_197.jpg", "Image_1773713259086_864.jpg", "Image_1773713259125_72.jpg", "Image_1773713259559_968.jpg", "Image_1773713259600_488.jpg", "Image_1773713260193_884.jpg", "Image_1773713260235_509.jpg", "Image_1773713260280_176.jpg", "Image_1773713260719_509.jpg", "Image_1773713260756_863.jpg", "Image_1773713261186_488.jpg", "Image_1773713261238_759.jpg", "Image_1773713261623_467.jpg", "Image_1773713261663_967.jpg", "Image_1773713262107_155.jpg", "Image_1773713262156_634.jpg", "Image_1773713262195_592.jpg", "Image_1773713263140_800.jpg", "Image_1773713263187_696.jpg", "Image_1773713264723_759.jpg", "Image_1773713264792_717.jpg", "Image_1773713265194_258.jpg", "Image_1773713265225_92.jpg", "Image_1773713265687_92.jpg", "Image_1773713265731_113.jpg", "Image_1773713266321_529.jpg", "Image_1773713266363_717.jpg", "Image_1773713266838_737.jpg", "Image_1773713266878_925.jpg", "Image_1773713268415_633.jpg", "Image_1773713268455_8.jpg", "Image_1773713268465_91.jpg"], "children": []}, {"name": "男士", "rel_path": "男士", "images": ["Image_1773706899299_1.jpg", "Image_1773706899443_896.jpg", "Image_1773706899923_230.jpg", "Image_1773706899965_459.jpg", "Image_1773706900402_521.jpg", "Image_1773706900449_646.jpg", "Image_1773706900519_0.jpg", "Image_1773706900994_480.jpg", "Image_1773706901036_84.jpg", "Image_1773706901487_21.jpg", "Image_1773706901521_104.jpg", "Image_1773706902014_188.jpg", "Image_1773706902054_688.jpg", "Image_1773706902946_708.jpg", "Image_1773706903000_625.jpg", "Image_1773706903527_729.jpg", "Image_1773706903581_958.jpg", "Image_1773706904558_21.jpg", "Image_1773706904613_937.jpg", "Image_1773706905655_270.jpg", "Image_1773706905697_229.jpg", "Image_1773706906365_770.jpg", "Image_1773706906417_708.jpg", "Image_1773706906806_354.jpg", "Image_1773706906838_624.jpg", "Image_1773706907199_291.jpg", "Image_1773706907244_458.jpg", "Image_1773706907632_666.jpg", "Image_1773706907660_791.jpg", "Image_1773706908053_208.jpg", "Image_1773706908089_249.jpg", "Image_1773706908477_478.jpg", "Image_1773706908510_937.jpg", "Image_1773706908951_124.jpg", "Image_1773706908997_770.jpg", "Image_1773706909389_207.jpg", "Image_1773706909431_103.jpg", "Image_1773706909836_20.jpg", "Image_1773706909862_478.jpg", "Image_1773706909890_853.jpg", "Image_1773706910309_270.jpg", "Image_1773706910347_874.jpg", "Image_1773706910769_207.jpg", "Image_1773706910807_436.jpg", "Image_1773706911387_665.jpg", "Image_1773706911435_415.jpg", "Image_1773706911479_811.jpg", "Image_1773706911878_124.jpg", "Image_1773706912620_207.jpg", "Image_1773706913929_603.jpg", "Image_1773707355187_202.jpg", "Image_1773707355253_931.jpg", "Image_1773707356930_431.jpg", "Image_1773707356996_993.jpg", "Image_1773707357046_347.jpg", "Image_1773707358753_868.jpg", "Image_1773707358798_681.jpg", "Image_1773707358844_972.jpg", "Image_1773707360060_76.jpg", "Image_1773707360115_534.jpg", "Image_1773707360742_659.jpg", "Image_1773707360772_868.jpg", "Image_1773707360797_993.jpg", "Image_1773707361814_555.jpg", "Image_1773707361823_763.jpg", "Image_1773707361861_159.jpg", "Image_1773707363084_867.jpg", "Image_1773707363130_222.jpg", "Image_1773707363619_638.jpg", "Image_1773707363667_492.jpg", "Image_1773707364023_34.jpg", "Image_1773707364071_388.jpg", "Image_1773707364765_75.jpg", "Image_1773707364811_700.jpg", "Image_1773707364815_117.jpg", "Image_1773707365453_721.jpg", "Image_1773707365496_554.jpg", "Image_1773707365973_450.jpg", "Image_1773707366024_34.jpg", "Image_1773707366456_867.jpg", "Image_1773707366517_388.jpg", "Image_1773707367339_554.jpg", "Image_1773707367382_346.jpg", "Image_1773707367387_533.jpg", "Image_1773707368239_429.jpg", "Image_1773707368263_658.jpg", "Image_1773707368718_367.jpg", "Image_1773707368758_991.jpg", "Image_1773707369660_366.jpg", "Image_1773707369701_12.jpg", "Image_1773707370146_137.jpg", "Image_1773707370183_825.jpg", "Image_1773707370573_304.jpg", "Image_1773707370611_533.jpg", "Image_1773707371139_158.jpg", "Image_1773707371168_741.jpg", "Image_1773707371721_12.jpg", "Image_1773707371732_595.jpg", "Image_1773707371762_741.jpg", "Image_1773707372938_366.jpg", "Image_1773707694486_504.jpg", "Image_1773707694540_46.jpg", "Image_1773707694980_88.jpg", "Image_1773707695029_338.jpg", "Image_1773707695778_837.jpg", "Image_1773707695817_796.jpg", "Image_1773707696572_671.jpg", "Image_1773707696618_983.jpg", "Image_1773707697038_4.jpg", "Image_1773707697084_900.jpg", "Image_1773707697547_420.jpg", "Image_1773707697588_962.jpg", "Image_1773707698061_525.jpg", "Image_1773707698107_900.jpg", "Image_1773707698718_316.jpg", "Image_1773707698764_545.jpg", "Image_1773707698802_379.jpg", "Image_1773707699408_670.jpg", "Image_1773707699447_149.jpg", "Image_1773707699864_295.jpg", "Image_1773707699905_691.jpg", "Image_1773707700313_941.jpg", "Image_1773707700363_483.jpg", "Image_1773707701024_337.jpg", "Image_1773707701078_962.jpg", "Image_1773707702168_691.jpg", "Image_1773707702218_461.jpg", "Image_1773707702244_461.jpg", "Image_1773707702804_607.jpg", "Image_1773707702848_878.jpg", "Image_1773707703231_795.jpg", "Image_1773707704121_190.jpg", "Image_1773707704174_274.jpg", "Image_1773707704664_399.jpg", "Image_1773707704718_544.jpg", "Image_1773707705321_628.jpg", "Image_1773707705362_836.jpg", "Image_1773707705804_23.jpg", "Image_1773707705864_482.jpg", "Image_1773707851748_939.jpg", "Image_1773707851808_251.jpg", "Image_1773707852311_293.jpg", "Image_1773707852348_418.jpg", "Image_1773707852949_813.jpg", "Image_1773707852999_897.jpg", "Image_1773707853439_876.jpg", "Image_1773707853468_605.jpg", "Image_1773707853885_730.jpg", "Image_1773707853915_667.jpg", "Image_1773707854271_459.jpg", "Image_1773707854307_647.jpg", "Image_1773707854721_959.jpg", "Image_1773707854754_647.jpg", "Image_1773707855107_1.jpg", "Image_1773707855140_251.jpg", "Image_1773707855530_167.jpg", "Image_1773707855566_646.jpg", "Image_1773707855969_0.jpg", "Image_1773707856004_480.jpg", "Image_1773707856483_813.jpg", "Image_1773707856519_396.jpg", "Image_1773707856546_21.jpg", "Image_1773707856870_709.jpg", "Image_1773707856986_167.jpg"], "children": []}, {"name": "男童", "rel_path": "男童", "images": ["Image_1773709413857_679.jpg", "Image_1773709413912_888.jpg", "Image_1773709414524_242.jpg", "Image_1773709414562_658.jpg", "Image_1773709415782_992.jpg", "Image_1773709415821_283.jpg", "Image_1773709417831_137.jpg", "Image_1773709417887_554.jpg", "Image_1773709418467_116.jpg", "Image_1773709418492_679.jpg", "Image_1773709418957_929.jpg", "Image_1773709418987_616.jpg", "Image_1773709419452_616.jpg", "Image_1773709419486_824.jpg", "Image_1773709419947_845.jpg", "Image_1773709419980_929.jpg", "Image_1773709420431_845.jpg", "Image_1773709420466_262.jpg", "Image_1773709420991_220.jpg", "Image_1773709421024_512.jpg", "Image_1773709421038_803.jpg", "Image_1773709421549_178.jpg", "Image_1773709421587_199.jpg", "Image_1773709422639_720.jpg", "Image_1773709422684_282.jpg", "Image_1773709424251_178.jpg", "Image_1773709424309_865.jpg", "Image_1773709424868_928.jpg", "Image_1773709424903_344.jpg", "Image_1773709425359_219.jpg", "Image_1773709425394_949.jpg", "Image_1773709425885_32.jpg", "Image_1773709425921_615.jpg", "Image_1773709426854_990.jpg", "Image_1773709426889_802.jpg", "Image_1773709426934_198.jpg", "Image_1773709429271_740.jpg", "Image_1773709429298_385.jpg", "Image_1773709429343_677.jpg", "Image_1773709429997_260.jpg", "Image_1773709430044_760.jpg", "Image_1773709431235_510.jpg", "Image_1773709431276_302.jpg", "Image_1773709432146_781.jpg", "Image_1773709432190_427.jpg", "Image_1773709432838_802.jpg", "Image_1773709432865_156.jpg", "Image_1773709434980_239.jpg", "Image_1773709435016_614.jpg", "Image_1773709435553_51.jpg", "Image_1773709570127_801.jpg", "Image_1773709570178_114.jpg", "Image_1773709571722_989.jpg", "Image_1773709571783_989.jpg", "Image_1773709572742_280.jpg", "Image_1773709572823_884.jpg", "Image_1773709573296_718.jpg", "Image_1773709573336_238.jpg", "Image_1773709574140_509.jpg", "Image_1773709574173_801.jpg", "Image_1773709576223_71.jpg", "Image_1773709576267_634.jpg", "Image_1773709577352_9.jpg", "Image_1773709577434_988.jpg", "Image_1773709578174_738.jpg", "Image_1773709578229_384.jpg", "Image_1773709580354_175.jpg", "Image_1773709580389_800.jpg", "Image_1773709580428_8.jpg", "Image_1773709580935_904.jpg", "Image_1773709580972_654.jpg", "Image_1773709581452_966.jpg", "Image_1773709581494_716.jpg", "Image_1773709581915_529.jpg", "Image_1773709581954_279.jpg", "Image_1773709582985_29.jpg", "Image_1773709583022_112.jpg", "Image_1773709584453_924.jpg", "Image_1773709584532_91.jpg", "Image_1773709585230_903.jpg", "Image_1773709585266_945.jpg", "Image_1773709588104_840.jpg", "Image_1773709588164_465.jpg", "Image_1773709589206_319.jpg", "Image_1773709589285_236.jpg", "Image_1773709589702_257.jpg", "Image_1773709589750_278.jpg", "Image_1773709590260_569.jpg", "Image_1773709590300_465.jpg", "Image_1773709590736_257.jpg", "Image_1773709590781_548.jpg", "Image_1773709591218_90.jpg", "Image_1773709591251_923.jpg", "Image_1773709591652_611.jpg", "Image_1773709591691_798.jpg", "Image_1773709592626_735.jpg", "Image_1773709592677_548.jpg", "Image_1773709593517_381.jpg", "Image_1773709593589_215.jpg", "Image_1773709594241_69.jpg", "Image_1773709698730_678.jpg", "Image_1773709698746_719.jpg", "Image_1773709699224_94.jpg", "Image_1773709699254_32.jpg", "Image_1773709699683_990.jpg", "Image_1773709699727_261.jpg", "Image_1773709700193_907.jpg", "Image_1773709700235_407.jpg", "Image_1773709700270_677.jpg", "Image_1773709700707_386.jpg", "Image_1773709700746_406.jpg", "Image_1773709701216_719.jpg", "Image_1773709701251_969.jpg", "Image_1773709701758_761.jpg", "Image_1773709701807_594.jpg", "Image_1773709702299_490.jpg", "Image_1773709702353_885.jpg", "Image_1773709702360_260.jpg", "Image_1773709702877_906.jpg", "Image_1773709702895_260.jpg", "Image_1773709703321_73.jpg", "Image_1773709703364_489.jpg", "Image_1773709703928_802.jpg", "Image_1773709703944_260.jpg", "Image_1773709703963_864.jpg", "Image_1773709704577_677.jpg", "Image_1773709704610_885.jpg", "Image_1773709705009_948.jpg", "Image_1773709705047_885.jpg", "Image_1773709705498_781.jpg", "Image_1773709705535_156.jpg", "Image_1773709706193_760.jpg", "Image_1773709706231_822.jpg", "Image_1773709706240_31.jpg", "Image_1773709706808_364.jpg", "Image_1773709706868_864.jpg", "Image_1773709707291_822.jpg", "Image_1773709707334_364.jpg", "Image_1773709707758_447.jpg", "Image_1773709707795_947.jpg", "Image_1773709708279_93.jpg", "Image_1773709708316_10.jpg", "Image_1773709708801_259.jpg", "Image_1773709708838_405.jpg", "Image_1773709708847_134.jpg", "Image_1773709709371_489.jpg", "Image_1773709709411_93.jpg", "Image_1773709709981_363.jpg", "Image_1773709710034_530.jpg", "Image_1773709710228_780.jpg", "Image_1773709812244_702.jpg", "Image_1773709812301_77.jpg", "Image_1773709813915_556.jpg", "Image_1773709814016_181.jpg", "Image_1773709815600_35.jpg", "Image_1773709815665_910.jpg", "Image_1773709817034_680.jpg", "Image_1773709817098_535.jpg", "Image_1773709817897_576.jpg", "Image_1773709817963_430.jpg", "Image_1773709818481_222.jpg", "Image_1773709818523_368.jpg", "Image_1773709820002_784.jpg", "Image_1773709820661_117.jpg", "Image_1773709820695_597.jpg", "Image_1773709821221_13.jpg", "Image_1773709821255_680.jpg", "Image_1773709823084_13.jpg", "Image_1773709823147_221.jpg", "Image_1773709823860_992.jpg", "Image_1773709823893_950.png", "Image_1773709825157_929.jpg", "Image_1773709825216_408.jpg", "Image_1773709825730_637.jpg", "Image_1773709825792_387.jpg", "Image_1773709827099_804.jpg", "Image_1773709827151_950.jpg", "Image_1773709828157_845.jpg", "Image_1773709828223_262.jpg", "Image_1773709828226_929.jpg", "Image_1773709829243_262.jpg", "Image_1773709829278_574.jpg", "Image_1773709829858_303.jpg", "Image_1773709829917_637.jpg", "Image_1773709829918_12.jpg", "Image_1773709831259_95.jpg", "Image_1773709831312_74.jpg", "Image_1773709833031_949.jpg", "Image_1773709833051_845.jpg", "Image_1773709833100_970.jpg", "Image_1773709834216_844.jpg", "Image_1773709834258_449.jpg", "Image_1773709834266_32.jpg", "Image_1773709834750_178.jpg", "Image_1773709834787_990.jpg", "Image_1773709835224_594.jpg", "Image_1773709835271_865.jpg", "Image_1773709835614_782.jpg", "Image_1773709836602_32.jpg", "Image_1773709936530_996.jpg", "Image_1773709936593_58.jpg", "Image_1773709937921_204.jpg", "Image_1773709937962_99.jpg", "Image_1773709939829_412.jpg", "Image_1773709939873_433.jpg", "Image_1773709940413_432.jpg", "Image_1773709940475_162.jpg", "Image_1773709940893_953.jpg", "Image_1773709940932_349.jpg", "Image_1773709941282_516.jpg", "Image_1773709941326_266.jpg", "Image_1773709941780_911.jpg", "Image_1773709941814_953.jpg", "Image_1773709942154_120.jpg", "Image_1773709942196_932.jpg", "Image_1773709942585_870.jpg", "Image_1773709942628_411.jpg", "Image_1773709943006_328.jpg", "Image_1773709943048_974.jpg", "Image_1773709943839_932.jpg", "Image_1773709943878_369.jpg", "Image_1773709944559_348.jpg", "Image_1773709944618_140.jpg", "Image_1773709945017_307.jpg", "Image_1773709945061_848.jpg", "Image_1773709946317_348.jpg", "Image_1773709946379_77.jpg", "Image_1773709947237_598.jpg", "Image_1773709947271_848.jpg", "Image_1773709948049_556.jpg", "Image_1773709948055_452.jpg", "Image_1773709948107_910.jpg", "Image_1773709949529_494.jpg", "Image_1773709949554_56.jpg", "Image_1773709949563_77.jpg", "Image_1773709950024_327.jpg", "Image_1773709950059_410.jpg", "Image_1773709950366_139.jpg", "Image_1773709950393_618.jpg", "Image_1773709951182_931.jpg", "Image_1773709951228_264.jpg", "Image_1773709952169_660.jpg", "Image_1773709952238_326.jpg", "Image_1773709952518_931.jpg", "Image_1773709953587_97.jpg", "Image_1773709953635_55.jpg", "Image_1773709953944_535.jpg", "Image_1773710030362_2.jpg", "Image_1773710030394_127.jpg", "Image_1773710030818_919.jpg", "Image_1773710030866_960.jpg", "Image_1773710031238_231.jpg", "Image_1773710031280_169.jpg", "Image_1773710031841_273.jpg", "Image_1773710031876_710.jpg", "Image_1773710031888_752.jpg", "Image_1773710032411_877.jpg", "Image_1773710032451_189.jpg", "Image_1773710032817_460.jpg", "Image_1773710032851_543.jpg", "Image_1773710033236_168.jpg", "Image_1773710033276_835.jpg", "Image_1773710033723_522.jpg", "Image_1773710033766_522.jpg", "Image_1773710034206_376.jpg", "Image_1773710034223_772.jpg", "Image_1773710034249_43.jpg", "Image_1773710034753_835.jpg", "Image_1773710034785_376.jpg", "Image_1773710035313_501.jpg", "Image_1773710035348_210.jpg", "Image_1773710035822_689.jpg", "Image_1773710035874_460.jpg", "Image_1773710036481_689.jpg", "Image_1773710036513_584.jpg", "Image_1773710036856_626.jpg", "Image_1773710036887_959.jpg", "Image_1773710037265_168.jpg", "Image_1773710037297_709.jpg", "Image_1773710037670_522.jpg", "Image_1773710037710_84.jpg", "Image_1773710038105_355.jpg", "Image_1773710038141_813.jpg", "Image_1773710038682_230.jpg", "Image_1773710038683_897.jpg", "Image_1773710038725_459.jpg", "Image_1773710039343_334.jpg", "Image_1773710039386_146.jpg", "Image_1773710039815_188.jpg", "Image_1773710039850_417.jpg", "Image_1773710040235_834.jpg", "Image_1773710040268_980.jpg", "Image_1773710041056_875.jpg", "Image_1773710041059_959.jpg", "Image_1773710041102_188.jpg", "Image_1773710041658_896.jpg", "Image_1773710041693_584.jpg", "Image_1773710153736_504.jpg", "Image_1773710153776_608.jpg", "Image_1773710154355_691.jpg", "Image_1773710154391_858.jpg", "Image_1773710154799_4.jpg", "Image_1773710154845_233.jpg", "Image_1773710154894_941.jpg", "Image_1773710155534_879.jpg", "Image_1773710155570_87.jpg", "Image_1773710155951_150.jpg", "Image_1773710155986_566.jpg", "Image_1773710156376_399.jpg", "Image_1773710156414_191.jpg", "Image_1773710156780_504.jpg", "Image_1773710156817_24.jpg", "Image_1773710157227_149.jpg", "Image_1773710157269_212.jpg", "Image_1773710157315_816.jpg", "Image_1773710157904_712.jpg", "Image_1773710157941_337.jpg", "Image_1773710158514_920.jpg", "Image_1773710158549_587.jpg", "Image_1773710158939_316.jpg", "Image_1773710158985_87.jpg", "Image_1773710159355_462.jpg", "Image_1773710159393_337.jpg", "Image_1773710159814_899.jpg", "Image_1773710159849_482.jpg", "Image_1773710160531_45.jpg", "Image_1773710160537_753.jpg", "Image_1773710160574_836.jpg", "Image_1773710161150_982.jpg", "Image_1773710161197_565.jpg", "Image_1773710161680_753.jpg", "Image_1773710161725_149.jpg", "Image_1773710162127_149.jpg", "Image_1773710162174_440.jpg", "Image_1773710162590_169.jpg", "Image_1773710162642_378.jpg", "Image_1773710163060_628.jpg", "Image_1773710163120_919.jpg", "Image_1773710163520_586.jpg", "Image_1773710163570_440.jpg", "Image_1773710164109_252.jpg", "Image_1773710164124_690.jpg", "Image_1773710164161_794.jpg", "Image_1773710164745_627.jpg", "Image_1773710164780_65.jpg", "Image_1773710165124_961.jpg", "Image_1773710165168_481.jpg", "Image_1773710267246_820.jpg", "Image_1773710267268_841.jpg", "Image_1773710267620_966.jpg", "Image_1773710267669_382.jpg", "Image_1773710268086_28.jpg", "Image_1773710268131_112.jpg", "Image_1773710268539_820.jpg", "Image_1773710268572_7.jpg", "Image_1773710268609_528.jpg", "Image_1773710269082_591.jpg", "Image_1773710269130_653.jpg", "Image_1773710269592_799.jpg", "Image_1773710269644_736.jpg", "Image_1773710270031_653.jpg", "Image_1773710270085_924.jpg", "Image_1773710270469_403.jpg", "Image_1773710270519_28.jpg", "Image_1773710271118_674.jpg", "Image_1773710271153_903.jpg", "Image_1773710271166_819.jpg", "Image_1773710271838_132.jpg", "Image_1773710271889_819.jpg", "Image_1773710272256_694.jpg", "Image_1773710272307_361.jpg", "Image_1773710272729_69.jpg", "Image_1773710272768_798.jpg", "Image_1773710273384_194.jpg", "Image_1773710273404_444.jpg", "Image_1773710273448_257.jpg", "Image_1773710273992_382.jpg", "Image_1773710274034_173.jpg", "Image_1773710274396_277.jpg", "Image_1773710274432_694.jpg", "Image_1773710274800_236.jpg", "Image_1773710274846_756.jpg", "Image_1773710275227_736.jpg", "Image_1773710275277_110.jpg", "Image_1773710275654_6.jpg", "Image_1773710275691_381.jpg", "Image_1773710276071_110.jpg", "Image_1773710276127_402.jpg", "Image_1773710276627_923.jpg", "Image_1773710276630_527.jpg", "Image_1773710276678_923.jpg", "Image_1773710277105_860.jpg", "Image_1773710277149_131.jpg", "Image_1773710277570_652.jpg", "Image_1773710277606_360.jpg", "Image_1773710277726_423.jpg", "Image_1773710382907_865.jpg", "Image_1773710382982_990.jpg", "Image_1773710383371_32.jpg", "Image_1773710383412_94.jpg", "Image_1773710383786_365.jpg", "Image_1773710383812_281.jpg", "Image_1773710384212_906.jpg", "Image_1773710384280_11.jpg", "Image_1773710384785_573.jpg", "Image_1773710384785_823.jpg", "Image_1773710384826_698.jpg", "Image_1773710385235_990.jpg", "Image_1773710385280_510.jpg", "Image_1773710385821_531.jpg", "Image_1773710385871_448.jpg", "Image_1773710386263_635.jpg", "Image_1773710386318_823.jpg", "Image_1773710386830_864.jpg", "Image_1773710386838_802.jpg", "Image_1773710386882_427.jpg", "Image_1773710387451_260.jpg", "Image_1773710387487_614.jpg", "Image_1773710387857_718.jpg", "Image_1773710387901_31.jpg", "Image_1773710388270_697.jpg", "Image_1773710388313_989.jpg", "Image_1773710388692_531.jpg", "Image_1773710388738_718.jpg", "Image_1773710388801_718.jpg", "Image_1773710389289_114.jpg", "Image_1773710389329_906.jpg", "Image_1773710389738_260.jpg", "Image_1773710389782_260.jpg", "Image_1773710390110_572.jpg", "Image_1773710390161_385.jpg", "Image_1773710390507_676.jpg", "Image_1773710390558_364.jpg", "Image_1773710390920_926.jpg", "Image_1773710390963_676.jpg", "Image_1773710390964_72.jpg", "Image_1773710391569_947.jpg", "Image_1773710391607_93.jpg", "Image_1773710391974_134.jpg", "Image_1773710392037_718.jpg", "Image_1773710403160_653.jpg", "Image_1773710406625_882.jpg"], "children": []}, {"name": "祝寿款", "rel_path": "祝寿款", "images": ["Image_1773711702919_913.jpg", "Image_1773711702970_622.jpg", "Image_1773711703324_518.jpg", "Image_1773711703361_663.jpg", "Image_1773711703941_288.jpg", "Image_1773711703965_434.jpg", "Image_1773711704515_476.jpg", "Image_1773711704549_497.jpg", "Image_1773711705076_642.jpg", "Image_1773711705111_121.jpg", "Image_1773711705556_371.jpg", "Image_1773711705584_538.jpg", "Image_1773711706255_871.jpg", "Image_1773711706300_100.jpg", "Image_1773711707362_829.jpg", "Image_1773711707398_850.jpg", "Image_1773711707412_829.jpg", "Image_1773711708051_559.jpg", "Image_1773711708079_767.jpg", "Image_1773711708626_267.jpg", "Image_1773711708666_246.jpg", "Image_1773711709502_517.jpg", "Image_1773711709553_475.jpg", "Image_1773711710013_579.jpg", "Image_1773711710052_829.jpg", "Image_1773711710105_350.jpg", "Image_1773711710706_100.jpg", "Image_1773711710758_287.jpg", "Image_1773711711351_621.jpg", "Image_1773711711403_516.jpg", "Image_1773711712619_850.jpg", "Image_1773711712659_433.jpg", "Image_1773711714025_662.jpg", "Image_1773711714101_828.jpg", "Image_1773711714547_683.jpg", "Image_1773711714588_912.jpg", "Image_1773711715016_745.jpg", "Image_1773711715056_391.jpg", "Image_1773711715509_787.jpg", "Image_1773711715542_391.jpg", "Image_1773711716296_786.jpg", "Image_1773711716338_453.jpg", "Image_1773711717188_724.jpg", "Image_1773711717252_161.jpg", "Image_1773711717773_411.jpg", "Image_1773711717812_78.jpg", "Image_1773711718245_744.jpg", "Image_1773711718281_78.jpg", "Image_1773711718517_536.jpg", "Image_1773711718760_703.jpg", "Image_1773711798271_461.jpg", "Image_1773711798861_816.jpg", "Image_1773711798891_399.jpg", "Image_1773711799403_586.jpg", "Image_1773711799437_545.jpg", "Image_1773711800000_461.jpg", "Image_1773711800433_503.jpg", "Image_1773711800899_107.jpg", "Image_1773711800936_232.jpg", "Image_1773711801325_357.jpg", "Image_1773711801759_398.jpg", "Image_1773711802189_253.jpg", "Image_1773711802227_357.jpg", "Image_1773711802610_690.jpg", "Image_1773711802635_232.jpg", "Image_1773711803021_2.jpg", "Image_1773711803047_544.jpg", "Image_1773711803463_606.jpg", "Image_1773711803497_627.jpg", "Image_1773711803525_919.jpg", "Image_1773711804006_586.jpg", "Image_1773711804043_398.jpg", "Image_1773711804439_315.jpg", "Image_1773711804477_877.jpg", "Image_1773711804849_919.jpg", "Image_1773711804883_502.jpg", "Image_1773711805290_940.jpg", "Image_1773711805325_44.jpg", "Image_1773711805701_544.jpg", "Image_1773711805735_585.jpg", "Image_1773711806126_356.jpg", "Image_1773711806151_856.jpg", "Image_1773711806532_106.jpg", "Image_1773711806558_439.jpg", "Image_1773711807115_356.jpg", "Image_1773711807136_606.jpg", "Image_1773711807592_377.jpg", "Image_1773711807631_689.jpg", "Image_1773711808035_543.jpg", "Image_1773711808085_731.jpg", "Image_1773711808546_147.jpg", "Image_1773711808583_877.jpg", "Image_1773711808735_981.jpg", "Image_1773711809123_293.jpg", "Image_1773712017939_636.jpg", "Image_1773712018061_303.jpg", "Image_1773712018443_907.jpg", "Image_1773712018483_678.jpg", "Image_1773712018911_199.jpg", "Image_1773712018947_928.jpg", "Image_1773712019459_886.jpg", "Image_1773712019489_990.jpg", "Image_1773712019524_969.jpg", "Image_1773712019945_511.jpg", "Image_1773712019980_386.jpg", "Image_1773712020521_282.jpg", "Image_1773712020552_323.jpg", "Image_1773712021141_177.jpg", "Image_1773712021179_719.jpg", "Image_1773712021670_761.jpg", "Image_1773712021705_282.jpg", "Image_1773712022097_865.jpg", "Image_1773712022135_261.jpg", "Image_1773712022140_73.jpg", "Image_1773712022631_344.jpg"], "children": []}];
+
+        let currentNode = null;
+        let currentImages = [];
+        let showcaseStartIndex = 0;
+
+        const treeEl = document.getElementById('category-tree');
+        const showcaseImagesEl = document.getElementById('showcase-images');
+        const galleryGridEl = document.getElementById('gallery-grid');
+        const prevBtn = document.getElementById('prev-showcase');
+        const nextBtn = document.getElementById('next-showcase');
+        const previewContainer = document.getElementById('preview-container');
+        const previewImg = document.getElementById('preview-img');
+
+        // 递归渲染树
+        function renderTree(nodes, parentElement, level = 0) {
+            nodes.forEach(node => {
+                const li = document.createElement('li');
+                li.style.paddingLeft = (level * 20) + 'px';
+                li.dataset.path = node.rel_path;  // 存储路径，用于高亮定位
+
+                const hasChildren = node.children && node.children.length > 0;
+                const hasImages = node.images && node.images.length > 0;
+
+                if (hasChildren) {
+                    // 文件夹节点：有子文件夹
+                    const toggleSpan = document.createElement('span');
+                    toggleSpan.className = 'toggle';
+                    toggleSpan.textContent = '▼'; // 默认展开
+                    toggleSpan.onclick = function(e) {
+                        e.stopPropagation();
+                        const content = li.querySelector('.folder-content');
+                        if (content) {
+                            if (content.style.display === 'none') {
+                                content.style.display = 'block';
+                                toggleSpan.textContent = '▼';
+                            } else {
+                                content.style.display = 'none';
+                                toggleSpan.textContent = '▶';
+                            }
+                        }
+                    };
+                    li.appendChild(toggleSpan);
+
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'node-folder' + (hasImages ? ' clickable' : '');
+                    nameSpan.textContent = node.name + (hasImages ? ` (${node.images.length})` : '');
+                    if (hasImages) {
+                        nameSpan.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            document.querySelectorAll('.tree .active').forEach(el => el.classList.remove('active'));
+                            li.classList.add('active');
+                            switchNode(node);
+                        });
+                    }
+                    li.appendChild(nameSpan);
+
+                    const childUl = document.createElement('ul');
+                    childUl.className = 'folder-content';
+                    li.appendChild(childUl);
+                    renderTree(node.children, childUl, level + 1);
+                } else if (hasImages) {
+                    // 叶子节点：只有图片，无子文件夹
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'node-leaf clickable';
+                    nameSpan.textContent = node.name + ` (${node.images.length})`;
+                    nameSpan.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        document.querySelectorAll('.tree .active').forEach(el => el.classList.remove('active'));
+                        li.classList.add('active');
+                        switchNode(node);
+                    });
+                    li.appendChild(nameSpan);
+                } else {
+                    // 既无图片也无子文件夹，不显示
+                    return;
+                }
+                parentElement.appendChild(li);
+            });
+        }
+
+        function switchNode(node) {
+            currentNode = node;
+            currentImages = node.images || [];
+            showcaseStartIndex = 0;
+            updateShowcase();
+            updateGallery();
+        }
+
+        function updateShowcase() {
+            const images = currentImages;
+            const total = images.length;
+
+            showcaseImagesEl.innerHTML = '';
+
+            if (total === 0) {
+                showcaseImagesEl.innerHTML = '<div class="no-images">暂无图片</div>';
+                prevBtn.disabled = true;
+                nextBtn.disabled = true;
+                return;
+            }
+
+            let indices = [];
+            for (let i = 0; i < 3; i++) {
+                let idx = (showcaseStartIndex + i) % total;
+                indices.push(idx);
+            }
+
+            indices.forEach(idx => {
+                const imgName = images[idx];
+                const imgPath = `${currentNode.rel_path}/${imgName}`;
+                const div = document.createElement('div');
+                div.className = 'showcase-item';
+                div.innerHTML = `<img src="${imgPath}" alt="${imgName}"><p>${imgName}</p>`;
+                showcaseImagesEl.appendChild(div);
+            });
+
+            prevBtn.disabled = total <= 3;
+            nextBtn.disabled = total <= 3;
+        }
+
+        function updateGallery() {
+            const images = currentImages;
+            const folder = currentNode.rel_path;
+            galleryGridEl.innerHTML = '';
+
+            if (images.length === 0) {
+                galleryGridEl.innerHTML = '<div class="no-images">暂无图片</div>';
+                return;
+            }
+
+            images.forEach(imgName => {
+                const imgPath = `${folder}/${imgName}`;
+                const img = document.createElement('img');
+                img.src = imgPath;
+                img.alt = imgName;
+
+                img.addEventListener('mouseenter', () => {
+                    previewImg.src = imgPath;
+                    previewContainer.style.display = 'block';
+                });
+                img.addEventListener('mouseleave', () => {
+                    previewContainer.style.display = 'none';
+                });
+
+                galleryGridEl.appendChild(img);
+            });
+        }
+
+        function prevShowcase() {
+            const total = currentImages.length;
+            if (total <= 3) return;
+            showcaseStartIndex = (showcaseStartIndex - 3 + total) % total;
+            updateShowcase();
+        }
+
+        function nextShowcase() {
+            const total = currentImages.length;
+            if (total <= 3) return;
+            showcaseStartIndex = (showcaseStartIndex + 3) % total;
+            updateShowcase();
+        }
+
+        // 初始化：渲染树并选中第一个有图片的节点
+        window.onload = function() {
+            renderTree(treeData, treeEl);
+
+            // 深度优先查找第一个有图片的节点
+            function findFirstWithImages(nodes) {
+                for (let node of nodes) {
+                    if (node.images && node.images.length > 0) return node;
+                    if (node.children) {
+                        const found = findFirstWithImages(node.children);
+                        if (found) return found;
+                    }
+                }
+                return null;
+            }
+            const firstNode = findFirstWithImages(treeData);
+            if (firstNode) {
+                setTimeout(() => {
+                    switchNode(firstNode);
+                    // 高亮对应的li
+                    const lis = document.querySelectorAll('.tree li');
+                    for (let li of lis) {
+                        if (li.dataset.path === firstNode.rel_path) {
+                            li.classList.add('active');
+                            break;
+                        }
+                    }
+                }, 100);
+            }
+        };
+    </script>
+</body>
+</html>
