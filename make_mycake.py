@@ -211,6 +211,7 @@ html = f"""<!DOCTYPE html>
             box-shadow: 0 4px 8px rgba(0,0,0,0.2);
             cursor: pointer;
             transition: box-shadow 0.2s;
+            background-color: #f5f5f5;  /* 占位背景 */
         }}
         .gallery-grid img:hover {{
             box-shadow: 0 8px 16px rgba(0,0,0,0.3);
@@ -240,6 +241,13 @@ html = f"""<!DOCTYPE html>
             max-width: 100%;
             max-height: 70vh;
             object-fit: contain;
+        }}
+        /* 懒加载过渡效果（可选） */
+        .gallery-grid img[src=""] {{
+            opacity: 0.5;
+        }}
+        .gallery-grid img {{
+            transition: opacity 0.2s;
         }}
     </style>
 </head>
@@ -285,6 +293,30 @@ html = f"""<!DOCTYPE html>
         const nextBtn = document.getElementById('next-showcase');
         const previewContainer = document.getElementById('preview-container');
         const previewImg = document.getElementById('preview-img');
+
+        // ---------- 懒加载 Intersection Observer ----------
+        const lazyObserver = new IntersectionObserver((entries, observer) => {{
+            entries.forEach(entry => {{
+                if (entry.isIntersecting) {{
+                    const img = entry.target;
+                    const dataSrc = img.getAttribute('data-src');
+                    if (dataSrc) {{
+                        img.src = dataSrc;
+                        img.removeAttribute('data-src');
+                        // 可选：加载完成后停止观察
+                        observer.unobserve(img);
+                    }}
+                }}
+            }});
+        }}, {{
+            rootMargin: '100px',   // 提前100px加载，提升体验
+            threshold: 0.01
+        }});
+
+        // 观察所有带 data-src 的图片
+        function observeLazyImages() {{
+            document.querySelectorAll('img[data-src]').forEach(img => lazyObserver.observe(img));
+        }}
 
         // 递归渲染树
         function renderTree(nodes, parentElement, level = 0) {{
@@ -385,7 +417,8 @@ html = f"""<!DOCTYPE html>
                 const imgPath = `${{currentNode.rel_path}}/${{imgName}}`;
                 const div = document.createElement('div');
                 div.className = 'showcase-item';
-                div.innerHTML = `<img src="${{imgPath}}" alt="${{imgName}}"><p>${{imgName}}</p>`;
+                // 展示区图片数量少，直接加载
+                div.innerHTML = `<img src="${{imgPath}}" alt="${{imgName}}" loading="lazy"><p>${{imgName}}</p>`;
                 showcaseImagesEl.appendChild(div);
             }});
 
@@ -406,11 +439,22 @@ html = f"""<!DOCTYPE html>
             images.forEach(imgName => {{
                 const imgPath = `${{folder}}/${{imgName}}`;
                 const img = document.createElement('img');
-                img.src = imgPath;
+                // 不直接设置 src，使用 data-src 实现懒加载
+                img.setAttribute('data-src', imgPath);
                 img.alt = imgName;
+                // 可选的占位背景通过 CSS 显示
+                img.style.backgroundColor = '#eee';
 
+                // 预览功能：鼠标移入时加载预览图（如果尚未加载，则临时加载）
                 img.addEventListener('mouseenter', () => {{
-                    previewImg.src = imgPath;
+                    // 如果图片还没加载（src为空），先临时设置src用于预览，但不影响懒加载逻辑
+                    if (!img.src) {{
+                        // 可以临时加载，但为了不重复请求，最好使用已经加载的图片
+                        // 简单起见：如果图片未加载，预览时直接使用 data-src
+                        previewImg.src = img.getAttribute('data-src') || imgPath;
+                    }} else {{
+                        previewImg.src = img.src;
+                    }}
                     previewContainer.style.display = 'block';
                 }});
                 img.addEventListener('mouseleave', () => {{
@@ -419,6 +463,9 @@ html = f"""<!DOCTYPE html>
 
                 galleryGridEl.appendChild(img);
             }});
+
+            // 新生成的图片需要被 observer 观察
+            observeLazyImages();
         }}
 
         function prevShowcase() {{
@@ -475,3 +522,4 @@ with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
 
 print(f"✅ 相册生成成功！文件名为：{OUTPUT_FILE}")
 print("📂 树形分类已生成，支持多级子文件夹。")
+print("⚡ 优化：图片已启用懒加载，滚动到可视区域时才会加载，首屏加载速度大幅提升。")
