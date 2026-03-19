@@ -3,8 +3,8 @@ import json
 
 # ========== 配置部分 ==========
 PHOTO_ROOT = "D:/my_cake_photos"      # 照片根目录，其下的所有子文件夹（不限层级）都会作为分类
-OUTPUT_FILE = "mycake.html"            # 生成的HTML文件名
-TITLE = "我的电子相册"                  # 网页标题
+OUTPUT_FILE = "index.html"            # 生成的HTML文件名
+TITLE = "华味嘉蛋糕电子相册"                  # 网页标题
 
 # 支持的图片格式
 IMAGE_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.gif', '.bmp')
