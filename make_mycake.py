@@ -1,14 +1,57 @@
 import os
 import json
+from PIL import Image
 
 # ========== 配置部分 ==========
-PHOTO_ROOT = "D:/my_cake_photos"      # 照片根目录，其下的所有子文件夹（不限层级）都会作为分类
-OUTPUT_FILE = "index.html"            # 生成的HTML文件名
-TITLE = "华味嘉蛋糕电子相册"                  # 网页标题
+PHOTO_ROOT = "D:/my_cake_photos"  # 照片根目录，其下的所有子文件夹（不限层级）都会作为分类
+OUTPUT_FILE = "index.html"  # 生成的HTML文件名
+TITLE = "华味嘉蛋糕电子相册"  # 网页标题
 
 # 支持的图片格式
 IMAGE_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.gif', '.bmp')
+
+# 缩略图配置
+ENABLE_THUMBNAIL = True  # 是否启用缩略图（若False则全部加载原图）
+THUMB_SIZE = (200, 200)  # 缩略图尺寸，与CSS中网格图片尺寸一致
+THUMB_ROOT = os.path.join(PHOTO_ROOT, '__thumbs__')  # 缩略图根目录（隐藏）
+
+
 # ==============================
+
+def generate_thumbnail(src_path, thumb_path):
+    """生成缩略图，如果成功返回True，否则返回False"""
+    try:
+        # 确保目标目录存在
+        os.makedirs(os.path.dirname(thumb_path), exist_ok=True)
+
+        with Image.open(src_path) as img:
+            # 转换为RGB（处理PNG透明背景等）
+            if img.mode in ('RGBA', 'LA', 'P'):
+                bg = Image.new('RGB', img.size, (255, 255, 255))
+                if img.mode == 'P':
+                    img = img.convert('RGBA')
+                bg.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+                img = bg
+            elif img.mode != 'RGB':
+                img = img.convert('RGB')
+
+            # 缩略图：裁剪居中并调整为THUMB_SIZE
+            img.thumbnail(THUMB_SIZE, Image.Resampling.LANCZOS)
+
+            # 如果尺寸不完全匹配，创建新图并居中粘贴（实现裁剪效果）
+            if img.size != THUMB_SIZE:
+                new_img = Image.new('RGB', THUMB_SIZE, (255, 255, 255))
+                offset = ((THUMB_SIZE[0] - img.size[0]) // 2,
+                          (THUMB_SIZE[1] - img.size[1]) // 2)
+                new_img.paste(img, offset)
+                new_img.save(thumb_path, 'JPEG', quality=85)
+            else:
+                img.save(thumb_path, 'JPEG', quality=85)
+        return True
+    except Exception as e:
+        print(f"生成缩略图失败: {src_path} -> {e}")
+        return False
+
 
 def build_tree(current_path, rel_path=""):
     """递归构建树，返回节点列表，每个节点包含 name, rel_path, images, children"""
@@ -17,18 +60,32 @@ def build_tree(current_path, rel_path=""):
         items = os.listdir(current_path)
     except PermissionError:
         return nodes
+
     for item in sorted(items):
         item_path = os.path.join(current_path, item)
         if os.path.isdir(item_path):
             child_rel = os.path.join(rel_path, item) if rel_path else item
             children = build_tree(item_path, child_rel)
+
             # 当前文件夹下的图片
             images = []
             for file in os.listdir(item_path):
                 file_path = os.path.join(item_path, file)
                 if os.path.isfile(file_path) and file.lower().endswith(IMAGE_EXTENSIONS):
+                    # 如果需要缩略图，则先生成
+                    if ENABLE_THUMBNAIL:
+                        # 缩略图保存路径：THUMB_ROOT / rel_path / file
+                        # 注意：rel_path使用斜杠，但在Windows中要转为反斜杠
+                        thumb_rel_path = rel_path.replace('\\', '/')
+                        thumb_dir = os.path.join(THUMB_ROOT,
+                                                 *thumb_rel_path.split('/')) if thumb_rel_path else THUMB_ROOT
+                        thumb_path = os.path.join(thumb_dir, file)
+                        # 如果缩略图不存在或原图更新，则生成
+                        if not os.path.exists(thumb_path) or os.path.getmtime(file_path) > os.path.getmtime(thumb_path):
+                            generate_thumbnail(file_path, thumb_path)
                     images.append(file)
             images.sort()
+
             node = {
                 "name": item,
                 "rel_path": child_rel.replace('\\', '/'),  # 统一为斜杠，用于HTML路径
@@ -40,6 +97,8 @@ def build_tree(current_path, rel_path=""):
                 nodes.append(node)
     return nodes
 
+
+print("正在扫描目录并生成缩略图...")
 tree = build_tree(PHOTO_ROOT)
 if not tree:
     print("没有找到任何图片分类，请检查根目录下是否有包含图片的子文件夹。")
@@ -242,9 +301,8 @@ html = f"""<!DOCTYPE html>
             max-height: 70vh;
             object-fit: contain;
         }}
-        /* 懒加载过渡效果（可选） */
-        .gallery-grid img[src=""] {{
-            opacity: 0.5;
+        .gallery-grid img[data-src] {{
+            opacity: 0.7;
         }}
         .gallery-grid img {{
             transition: opacity 0.2s;
@@ -281,6 +339,7 @@ html = f"""<!DOCTYPE html>
 
     <script>
         const treeData = {tree_json};
+        const ENABLE_THUMBNAIL = {str(ENABLE_THUMBNAIL).lower()};  // 传递给前端
 
         let currentNode = null;
         let currentImages = [];
@@ -303,17 +362,15 @@ html = f"""<!DOCTYPE html>
                     if (dataSrc) {{
                         img.src = dataSrc;
                         img.removeAttribute('data-src');
-                        // 可选：加载完成后停止观察
                         observer.unobserve(img);
                     }}
                 }}
             }});
         }}, {{
-            rootMargin: '100px',   // 提前100px加载，提升体验
+            rootMargin: '100px',
             threshold: 0.01
         }});
 
-        // 观察所有带 data-src 的图片
         function observeLazyImages() {{
             document.querySelectorAll('img[data-src]').forEach(img => lazyObserver.observe(img));
         }}
@@ -323,16 +380,15 @@ html = f"""<!DOCTYPE html>
             nodes.forEach(node => {{
                 const li = document.createElement('li');
                 li.style.paddingLeft = (level * 20) + 'px';
-                li.dataset.path = node.rel_path;  // 存储路径，用于高亮定位
+                li.dataset.path = node.rel_path;
 
                 const hasChildren = node.children && node.children.length > 0;
                 const hasImages = node.images && node.images.length > 0;
 
                 if (hasChildren) {{
-                    // 文件夹节点：有子文件夹
                     const toggleSpan = document.createElement('span');
                     toggleSpan.className = 'toggle';
-                    toggleSpan.textContent = '▼'; // 默认展开
+                    toggleSpan.textContent = '▼';
                     toggleSpan.onclick = function(e) {{
                         e.stopPropagation();
                         const content = li.querySelector('.folder-content');
@@ -366,7 +422,6 @@ html = f"""<!DOCTYPE html>
                     li.appendChild(childUl);
                     renderTree(node.children, childUl, level + 1);
                 }} else if (hasImages) {{
-                    // 叶子节点：只有图片，无子文件夹
                     const nameSpan = document.createElement('span');
                     nameSpan.className = 'node-leaf clickable';
                     nameSpan.textContent = node.name + ` (${{node.images.length}})`;
@@ -378,7 +433,6 @@ html = f"""<!DOCTYPE html>
                     }});
                     li.appendChild(nameSpan);
                 }} else {{
-                    // 既无图片也无子文件夹，不显示
                     return;
                 }}
                 parentElement.appendChild(li);
@@ -417,7 +471,7 @@ html = f"""<!DOCTYPE html>
                 const imgPath = `${{currentNode.rel_path}}/${{imgName}}`;
                 const div = document.createElement('div');
                 div.className = 'showcase-item';
-                // 展示区图片数量少，直接加载
+                // 展示区图片数量少，直接加载原图（或缩略图？这里保留原图以保证清晰）
                 div.innerHTML = `<img src="${{imgPath}}" alt="${{imgName}}" loading="lazy"><p>${{imgName}}</p>`;
                 showcaseImagesEl.appendChild(div);
             }});
@@ -437,25 +491,31 @@ html = f"""<!DOCTYPE html>
             }}
 
             images.forEach(imgName => {{
-                const imgPath = `${{folder}}/${{imgName}}`;
+                let thumbPath, fullPath;
+                if (ENABLE_THUMBNAIL) {{
+                    // 缩略图路径：__thumbs__/相对路径/图片名
+                    thumbPath = `__thumbs__/${{folder}}/${{imgName}}`;
+                    fullPath = `${{folder}}/${{imgName}}`;
+                }} else {{
+                    thumbPath = fullPath = `${{folder}}/${{imgName}}`;
+                }}
+
                 const img = document.createElement('img');
-                // 不直接设置 src，使用 data-src 实现懒加载
-                img.setAttribute('data-src', imgPath);
+                img.setAttribute('data-src', thumbPath);   // 懒加载缩略图
+                if (ENABLE_THUMBNAIL) {{
+                    img.setAttribute('data-fullsrc', fullPath); // 存储原图路径供预览
+                }}
                 img.alt = imgName;
-                // 可选的占位背景通过 CSS 显示
                 img.style.backgroundColor = '#eee';
 
-                // 预览功能：鼠标移入时加载预览图（如果尚未加载，则临时加载）
+                // 预览功能：鼠标移入时显示原图
                 img.addEventListener('mouseenter', () => {{
-                    // 如果图片还没加载（src为空），先临时设置src用于预览，但不影响懒加载逻辑
-                    if (!img.src) {{
-                        // 可以临时加载，但为了不重复请求，最好使用已经加载的图片
-                        // 简单起见：如果图片未加载，预览时直接使用 data-src
-                        previewImg.src = img.getAttribute('data-src') || imgPath;
-                    }} else {{
-                        previewImg.src = img.src;
+                    // 如果有data-fullsrc则使用原图，否则使用缩略图（即未启用缩略图的情况）
+                    const src = img.getAttribute('data-fullsrc') || img.src || img.getAttribute('data-src');
+                    if (src) {{
+                        previewImg.src = src;
+                        previewContainer.style.display = 'block';
                     }}
-                    previewContainer.style.display = 'block';
                 }});
                 img.addEventListener('mouseleave', () => {{
                     previewContainer.style.display = 'none';
@@ -464,7 +524,6 @@ html = f"""<!DOCTYPE html>
                 galleryGridEl.appendChild(img);
             }});
 
-            // 新生成的图片需要被 observer 观察
             observeLazyImages();
         }}
 
@@ -486,7 +545,6 @@ html = f"""<!DOCTYPE html>
         window.onload = function() {{
             renderTree(treeData, treeEl);
 
-            // 深度优先查找第一个有图片的节点
             function findFirstWithImages(nodes) {{
                 for (let node of nodes) {{
                     if (node.images && node.images.length > 0) return node;
@@ -501,7 +559,6 @@ html = f"""<!DOCTYPE html>
             if (firstNode) {{
                 setTimeout(() => {{
                     switchNode(firstNode);
-                    // 高亮对应的li
                     const lis = document.querySelectorAll('.tree li');
                     for (let li of lis) {{
                         if (li.dataset.path === firstNode.rel_path) {{
@@ -522,4 +579,7 @@ with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
 
 print(f"✅ 相册生成成功！文件名为：{OUTPUT_FILE}")
 print("📂 树形分类已生成，支持多级子文件夹。")
-print("⚡ 优化：图片已启用懒加载，滚动到可视区域时才会加载，首屏加载速度大幅提升。")
+if ENABLE_THUMBNAIL:
+    print("🖼️ 缩略图功能已启用，网格展示缩略图，鼠标悬停预览原图，加载速度大幅优化。")
+else:
+    print("⚡ 缩略图功能未启用，仍使用原图加载，若图片较多建议开启缩略图。")
