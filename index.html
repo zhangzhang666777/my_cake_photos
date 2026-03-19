@@ -3,219 +3,211 @@
 <head>
     <meta charset="UTF-8">
     <title>华味嘉蛋糕电子相册</title>
+    <!-- Font Awesome 图标库 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f0f0f0;
-        }
-        #container {
-            display: flex;
-            min-height: 100vh;
-        }
-        /* 左侧树形导航 */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Roboto, Arial, sans-serif; background-color: #f4f7fb; }
+        #container { display: flex; min-height: 100vh; }
+
+        /* ===== 左侧导航 ===== */
         #sidebar {
-            width: 260px;
-            background-color: #333;
-            color: white;
-            padding: 20px;
+            width: 280px;
+            background-color: #ffffff;
+            color: #2c3e50;
+            padding: 24px 16px;
+            box-shadow: 2px 0 12px rgba(0,0,0,0.03);
             overflow-y: auto;
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            border-right: 1px solid #e9ecef;
         }
         #sidebar h2 {
-            margin-bottom: 20px;
-            font-size: 1.4em;
-            border-bottom: 2px solid #555;
-            padding-bottom: 10px;
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: #1e2a3a;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #e9ecef;
+            letter-spacing: 0.3px;
         }
         .tree, .tree ul {
             list-style: none;
             margin: 0;
-            padding-left: 20px;
+            padding-left: 0;
         }
         .tree li {
-            margin: 5px 0;
+            margin: 2px 0;
+            line-height: 1.5;
+        }
+        .tree .node-row {
+            display: flex;
+            align-items: center;
+            padding: 6px 8px;
+            border-radius: 8px;
+            transition: background-color 0.15s;
             cursor: default;
-            user-select: none;
         }
-        .tree .node-folder {
-            font-weight: bold;
-            color: #ddd;
+        .tree .node-row:hover {
+            background-color: #f1f5f9;
         }
-        .tree .node-leaf {
-            color: #aaa;
+        .tree .icon {
+            width: 28px;
+            text-align: left;
+            color: #5f6b7a;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: color 0.15s;
         }
-        .tree .node-folder.clickable, .tree .node-leaf.clickable {
+        .tree .icon:hover {
+            color: #0d6efd;
+        }
+        .tree .name {
+            flex: 1;
+            font-size: 0.95rem;
+            color: #2c3e50;
+            padding: 2px 6px;
+            border-radius: 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .tree .name.clickable {
             cursor: pointer;
         }
-        .tree .node-folder.clickable:hover, .tree .node-leaf.clickable:hover {
+        .tree .name.clickable:hover {
+            background-color: #e1e8f0;
+        }
+        .tree .name.active {
+            background-color: #0d6efd;
             color: white;
+            font-weight: 500;
         }
-        .tree .active {
-            background-color: #007bff;
-            color: white !important;
-            border-radius: 4px;
-            padding: 2px 5px;
+        .tree .badge {
+            background-color: #e9ecef;
+            color: #495057;
+            font-size: 0.7rem;
+            font-weight: 500;
+            padding: 2px 8px;
+            border-radius: 30px;
+            margin-left: 8px;
+            white-space: nowrap;
         }
-        .tree .toggle {
-            display: inline-block;
-            width: 16px;
-            text-align: center;
-            cursor: pointer;
-            color: #aaa;
-        }
-        .tree .toggle:hover {
+        .tree .name.active .badge {
+            background-color: rgba(255,255,255,0.25);
             color: white;
         }
         .tree .folder-content {
+            margin-left: 28px;
             display: block;
         }
         .tree .folder-content.collapsed {
             display: none;
         }
-        /* 右侧主内容区 */
+
+        /* ===== 右侧主内容区 ===== */
         #main {
-            flex: 1;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
+            flex: 1; padding: 24px; display: flex; flex-direction: column;
         }
         #top-showcase {
-            background-color: #fff;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            background: white; border-radius: 16px; padding: 20px; margin-bottom: 24px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.02); border: 1px solid #edf2f7;
         }
-        #showcase-title {
-            font-size: 1.2em;
-            margin-bottom: 15px;
-            color: #333;
-        }
-        #showcase-images {
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            gap: 20px;
-        }
-        .showcase-item {
-            text-align: center;
-            flex: 1;
-        }
+        #showcase-title { font-size: 1.1rem; font-weight: 600; color: #1e293b; margin-bottom: 16px; }
+        #showcase-images { display: flex; justify-content: space-around; align-items: center; gap: 20px; }
+        .showcase-item { text-align: center; flex: 1; }
         .showcase-item img {
-            width: 100%;
-            max-width: 200px;
-            height: 150px;
-            object-fit: cover;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            width: 100%; max-width: 200px; height: 150px; object-fit: cover;
+            border-radius: 12px; box-shadow: 0 6px 14px rgba(0,0,0,0.06);
         }
-        .showcase-item p {
-            margin-top: 8px;
-            font-size: 0.9em;
-            color: #666;
-        }
-        #showcase-controls {
-            display: flex;
-            justify-content: center;
-            margin-top: 15px;
-        }
+        .showcase-item p { margin-top: 8px; font-size: 0.85rem; color: #4b5563; }
+        #showcase-controls { display: flex; justify-content: center; margin-top: 16px; gap: 12px; }
         #showcase-controls button {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 8px 20px;
-            margin: 0 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 1em;
+            background: white; border: 1px solid #d1d9e6; color: #1e293b;
+            padding: 8px 22px; border-radius: 40px; cursor: pointer;
+            font-size: 0.95rem; font-weight: 500; transition: all 0.15s;
         }
         #showcase-controls button:hover {
-            background-color: #0056b3;
+            background: #f1f5f9; border-color: #a0b3cc;
         }
         #showcase-controls button:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
+            opacity: 0.4; cursor: not-allowed;
         }
         #gallery {
-            background-color: #fff;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            flex: 1;
+            background: white; border-radius: 16px; padding: 24px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.02); border: 1px solid #edf2f7; flex: 1;
         }
         .gallery-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            justify-content: center;
+            display: flex; flex-wrap: wrap; gap: 16px; justify-content: center;
         }
         .gallery-grid img {
-            width: 200px;
-            height: 200px;
-            object-fit: cover;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            cursor: pointer;
-            transition: box-shadow 0.2s;
-            background-color: #f5f5f5;  /* 占位背景 */
+            width: 200px; height: 200px; object-fit: cover; border-radius: 12px;
+            box-shadow: 0 6px 14px rgba(0,0,0,0.04); cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+            background-color: #f8fafc; border: 1px solid #eef2f6;
         }
         .gallery-grid img:hover {
-            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+            transform: scale(1.02); box-shadow: 0 12px 24px rgba(0,0,0,0.08);
         }
-        .no-images {
-            text-align: center;
-            color: #999;
-            padding: 50px;
-            font-size: 1.2em;
-        }
+        .no-images { text-align: center; color: #94a3b8; padding: 60px; font-size: 1rem; }
+
+        /* ===== 预览悬浮窗（带文件名，无后缀） ===== */
         #preview-container {
             display: none;
             position: fixed;
             bottom: 30px;
             right: 30px;
             background: white;
-            border: 2px solid #ddd;
-            border-radius: 10px;
-            padding: 10px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+            border-radius: 16px;
+            padding: 12px 12px 8px 12px;
+            box-shadow: 0 20px 30px rgba(0,0,0,0.2);
+            border: 1px solid #e9eef3;
             z-index: 1000;
             max-width: 80vw;
             max-height: 80vh;
+            text-align: center;
         }
         #preview-img {
             display: block;
             max-width: 100%;
-            max-height: 70vh;
+            max-height: 65vh;
             object-fit: contain;
+            border-radius: 8px;
         }
-        .gallery-grid img[data-src] {
-            opacity: 0.7;
-        }
-        .gallery-grid img {
-            transition: opacity 0.2s;
+        .preview-filename {
+            margin-top: 8px;
+            padding: 6px 12px;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            font-size: 0.9rem;
+            border-radius: 30px;
+            display: inline-block;
+            max-width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255,255,255,0.2);
         }
     </style>
 </head>
 <body>
     <div id="container">
-        <!-- 左侧树形分类导航 -->
         <div id="sidebar">
-            <h2>相册分类</h2>
+            <h2>📁 相册分类</h2>
             <ul class="tree" id="category-tree"></ul>
         </div>
-
-        <!-- 右侧主内容区 -->
         <div id="main">
             <div id="top-showcase">
-                <div id="showcase-title">精选展示</div>
+                <div id="showcase-title">✨ 精选展示</div>
                 <div id="showcase-images"></div>
                 <div id="showcase-controls">
-                    <button id="prev-showcase" onclick="prevShowcase()">❮ 上一组</button>
-                    <button id="next-showcase" onclick="nextShowcase()">下一组 ❯</button>
+                    <button id="prev-showcase" onclick="prevShowcase()">← 上一组</button>
+                    <button id="next-showcase" onclick="nextShowcase()">下一组 →</button>
                 </div>
             </div>
             <div id="gallery">
@@ -224,13 +216,15 @@
         </div>
     </div>
 
+    <!-- 预览悬浮窗（含文件名显示，无后缀） -->
     <div id="preview-container">
         <img id="preview-img" src="" alt="预览">
+        <div id="preview-filename" class="preview-filename"></div>
     </div>
 
     <script>
         const treeData = [{"name": "千层", "rel_path": "千层", "images": ["千层 (1).jpg", "千层 (10).jpg", "千层 (11).jpg", "千层 (12).jpg", "千层 (13).jpg", "千层 (14).jpg", "千层 (15).jpg", "千层 (16).jpg", "千层 (17).jpg", "千层 (18).jpg", "千层 (19).jpg", "千层 (2).jpg", "千层 (20).jpg", "千层 (21).jpg", "千层 (22).jpg", "千层 (23).jpg", "千层 (24).jpg", "千层 (25).jpg", "千层 (26).jpg", "千层 (27).jpg", "千层 (28).jpg", "千层 (29).jpg", "千层 (3).jpg", "千层 (30).jpg", "千层 (31).jpg", "千层 (32).jpg", "千层 (33).jpg", "千层 (34).jpg", "千层 (35).jpg", "千层 (36).jpg", "千层 (37).jpg", "千层 (38).jpg", "千层 (39).jpg", "千层 (4).jpg", "千层 (40).jpg", "千层 (41).jpg", "千层 (42).jpg", "千层 (43).jpg", "千层 (44).jpg", "千层 (45).jpg", "千层 (5).jpg", "千层 (6).jpg", "千层 (7).jpg", "千层 (8).jpg", "千层 (9).jpg"], "children": []}, {"name": "发财麻将", "rel_path": "发财麻将", "images": ["发财麻将1.jpg", "发财麻将10.jpg", "发财麻将11.jpg", "发财麻将12.jpg", "发财麻将13.jpg", "发财麻将14.jpg", "发财麻将15.jpg", "发财麻将16.jpg", "发财麻将17.jpg", "发财麻将18.jpg", "发财麻将19.jpg", "发财麻将2.jpg", "发财麻将20.jpg", "发财麻将21.jpg", "发财麻将22.jpg", "发财麻将23.jpg", "发财麻将25.jpg", "发财麻将26.jpg", "发财麻将27.jpg", "发财麻将28.jpg", "发财麻将29.jpg", "发财麻将3.jpg", "发财麻将30.jpg", "发财麻将31.jpg", "发财麻将32.jpg", "发财麻将33.jpg", "发财麻将35.jpg", "发财麻将36.jpg", "发财麻将37.jpg", "发财麻将38.jpg", "发财麻将39.jpg", "发财麻将4.jpg", "发财麻将40.jpg", "发财麻将41.jpg", "发财麻将42.jpg", "发财麻将43.jpg", "发财麻将45.jpg", "发财麻将46.jpg", "发财麻将47.jpg", "发财麻将48.jpg", "发财麻将5.jpg", "发财麻将6.jpg", "发财麻将7.jpg", "发财麻将8.jpg", "发财麻将9.jpg"], "children": []}, {"name": "女童", "rel_path": "女童", "images": [], "children": [{"name": "公主类型", "rel_path": "女童/公主类型", "images": ["女童公主1.jpg", "女童公主10.jpg", "女童公主11.jpg", "女童公主12.jpg", "女童公主13.jpg", "女童公主14.jpg", "女童公主15.jpg", "女童公主16.jpg", "女童公主17.jpg", "女童公主18.jpg", "女童公主19.jpg", "女童公主2.jpg", "女童公主20.jpg", "女童公主21.jpg", "女童公主22.jpg", "女童公主23.jpg", "女童公主24.jpg", "女童公主25.jpg", "女童公主26.jpg", "女童公主27.jpg", "女童公主28.jpg", "女童公主29.jpg", "女童公主3.jpg", "女童公主30.jpg", "女童公主31.jpg", "女童公主32.jpg", "女童公主33.jpg", "女童公主34.jpg", "女童公主35.jpg", "女童公主36.jpg", "女童公主37.jpg", "女童公主38.jpg", "女童公主39.jpg", "女童公主4.jpg", "女童公主40.jpg", "女童公主41.jpg", "女童公主42.jpg", "女童公主43.jpg", "女童公主44.jpg", "女童公主45.jpg", "女童公主46.jpg", "女童公主47.jpg", "女童公主48.jpg", "女童公主49.jpg", "女童公主5.jpg", "女童公主50.jpg", "女童公主51.jpg", "女童公主52.jpg", "女童公主53.jpg", "女童公主54.jpg", "女童公主55.jpg", "女童公主56.jpg", "女童公主57.jpg", "女童公主58.jpg", "女童公主59.jpg", "女童公主6.jpg", "女童公主60.jpg", "女童公主61.jpg", "女童公主62.jpg", "女童公主63.jpg", "女童公主64.jpg", "女童公主65.jpg", "女童公主66.jpg", "女童公主67.jpg", "女童公主68.jpg", "女童公主69.jpg", "女童公主7.jpg", "女童公主70.jpg", "女童公主8.jpg", "女童公主9.jpg"], "children": []}, {"name": "创意造型", "rel_path": "女童/创意造型", "images": ["女童创意01.jpg", "女童创意02.jpg", "女童创意03.jpg", "女童创意04.jpg", "女童创意05.jpg", "女童创意06.jpg", "女童创意07.jpg", "女童创意08.jpg", "女童创意09.jpg", "女童创意10.jpg", "女童创意11.jpg", "女童创意12.jpg", "女童创意13.jpg", "女童创意14.jpg", "女童创意15.jpg", "女童创意16.jpg", "女童创意17.jpg", "女童创意18.jpg", "女童创意19.jpg", "女童创意20.jpg", "女童创意21.jpg", "女童创意22.jpg", "女童创意23.jpg", "女童创意25.jpg", "女童创意26.jpg", "女童创意27.jpg", "女童创意28.jpg", "女童创意29.jpg", "女童创意30.jpg", "女童创意31.jpg", "女童创意32.jpg", "女童创意33.jpg", "女童创意34.jpg", "女童创意35.jpg", "女童创意36.jpg", "女童创意37.jpg", "女童创意38.jpg", "女童创意39.jpg"], "children": []}, {"name": "动漫公仔", "rel_path": "女童/动漫公仔", "images": ["女童公仔01.jpg", "女童公仔02.jpg", "女童公仔03.jpg", "女童公仔04.jpg", "女童公仔05.jpg", "女童公仔06.jpg", "女童公仔07.jpg", "女童公仔08.jpg", "女童公仔09.jpg", "女童公仔10.jpg", "女童公仔100.jpg", "女童公仔101.jpg", "女童公仔102.jpg", "女童公仔103.jpg", "女童公仔104.jpg", "女童公仔105.jpg", "女童公仔106.jpg", "女童公仔107.jpg", "女童公仔108.jpg", "女童公仔109.jpg", "女童公仔11.jpg", "女童公仔110.jpg", "女童公仔111.jpg", "女童公仔112.jpg", "女童公仔113.jpg", "女童公仔114.jpg", "女童公仔115.jpg", "女童公仔116.jpg", "女童公仔12.jpg", "女童公仔13.jpg", "女童公仔14.jpg", "女童公仔15.jpg", "女童公仔16.jpg", "女童公仔17.jpg", "女童公仔18.jpg", "女童公仔19.jpg", "女童公仔20.jpg", "女童公仔21.jpg", "女童公仔22.jpg", "女童公仔23.jpg", "女童公仔24.jpg", "女童公仔25.jpg", "女童公仔26.jpg", "女童公仔27.jpg", "女童公仔28.jpg", "女童公仔29.jpg", "女童公仔30.jpg", "女童公仔31.jpg", "女童公仔32.jpg", "女童公仔33.jpg", "女童公仔34.jpg", "女童公仔35.jpg", "女童公仔36.jpg", "女童公仔37.jpg", "女童公仔38.jpg", "女童公仔39.jpg", "女童公仔40.jpg", "女童公仔41.jpg", "女童公仔42.jpg", "女童公仔43.jpg", "女童公仔45.jpg", "女童公仔46.jpg", "女童公仔47.jpg", "女童公仔48.jpg", "女童公仔49.jpg", "女童公仔50.jpg", "女童公仔51.jpg", "女童公仔52.jpg", "女童公仔53.jpg", "女童公仔54.jpg", "女童公仔55.jpg", "女童公仔56.jpg", "女童公仔57.jpg", "女童公仔58.jpg", "女童公仔59.jpg", "女童公仔60.jpg", "女童公仔61.jpg", "女童公仔62.jpg", "女童公仔63.jpg", "女童公仔64.jpg", "女童公仔65.jpg", "女童公仔66.jpg", "女童公仔67.jpg", "女童公仔68.jpg", "女童公仔69.jpg", "女童公仔70.jpg", "女童公仔71.jpg", "女童公仔72.jpg", "女童公仔73.jpg", "女童公仔74.jpg", "女童公仔75.jpg", "女童公仔76.jpg", "女童公仔77.jpg", "女童公仔78.jpg", "女童公仔79.jpg", "女童公仔80.jpg", "女童公仔81.jpg", "女童公仔82.jpg", "女童公仔83.jpg", "女童公仔84.jpg", "女童公仔85.jpg", "女童公仔86.jpg", "女童公仔87.jpg", "女童公仔88.jpg", "女童公仔89.jpg", "女童公仔90.jpg", "女童公仔91.jpg", "女童公仔92.jpg", "女童公仔93.jpg", "女童公仔94.jpg", "女童公仔95.jpg", "女童公仔96.jpg", "女童公仔97.jpg", "女童公仔98.jpg", "女童公仔99.jpg"], "children": []}, {"name": "简单手绘", "rel_path": "女童/简单手绘", "images": ["女童手绘1.jpg", "女童手绘10.jpg", "女童手绘11.jpg", "女童手绘12.jpg", "女童手绘13.jpg", "女童手绘14.jpg", "女童手绘2.jpg", "女童手绘3.jpg", "女童手绘4.jpg", "女童手绘5.jpg", "女童手绘6.jpg", "女童手绘7.jpg", "女童手绘8.jpg", "女童手绘9.jpg"], "children": []}, {"name": "翻糖皮巧克力配件", "rel_path": "女童/翻糖皮巧克力配件", "images": ["女童翻糖巧01.jpg", "女童翻糖巧02.jpg", "女童翻糖巧03.jpg", "女童翻糖巧04.jpg", "女童翻糖巧05.jpg", "女童翻糖巧06.jpg", "女童翻糖巧07.jpg", "女童翻糖巧08.jpg", "女童翻糖巧09.jpg", "女童翻糖巧10.jpg", "女童翻糖巧11.jpg", "女童翻糖巧12.jpg", "女童翻糖巧13.jpg", "女童翻糖巧14.jpg", "女童翻糖巧15.jpg", "女童翻糖巧16.jpg", "女童翻糖巧17.jpg", "女童翻糖巧18.jpg", "女童翻糖巧19.jpg", "女童翻糖巧20.jpg", "女童翻糖巧21.jpg", "女童翻糖巧22.jpg", "女童翻糖巧23.jpg", "女童翻糖巧24.jpg", "女童翻糖巧25.jpg", "女童翻糖巧26.jpg", "女童翻糖巧27.jpg"], "children": []}]}, {"name": "妈妈款", "rel_path": "妈妈款", "images": ["妈妈款式1.jpg", "妈妈款式10.jpg", "妈妈款式11.jpg", "妈妈款式12.jpg", "妈妈款式13.jpg", "妈妈款式14.jpg", "妈妈款式15.jpg", "妈妈款式16.jpg", "妈妈款式17.jpg", "妈妈款式18.jpg", "妈妈款式19.jpg", "妈妈款式2.jpg", "妈妈款式20.jpg", "妈妈款式21.jpg", "妈妈款式22.jpg", "妈妈款式23.jpg", "妈妈款式24.jpg", "妈妈款式26.jpg", "妈妈款式3.jpg", "妈妈款式4.jpg", "妈妈款式5.jpg", "妈妈款式6.jpg", "妈妈款式7.jpg", "妈妈款式8.jpg", "妈妈款式9.jpg"], "children": []}, {"name": "年轻女士", "rel_path": "年轻女士", "images": ["女士款式 (1).jpg", "女士款式 (10).jpg", "女士款式 (100).jpg", "女士款式 (101).jpg", "女士款式 (102).jpg", "女士款式 (103).jpg", "女士款式 (104).jpg", "女士款式 (105).jpg", "女士款式 (106).jpg", "女士款式 (107).jpg", "女士款式 (108).jpg", "女士款式 (109).jpg", "女士款式 (11).jpg", "女士款式 (110).jpg", "女士款式 (111).jpg", "女士款式 (112).jpg", "女士款式 (113).jpg", "女士款式 (114).jpg", "女士款式 (115).jpg", "女士款式 (116).jpg", "女士款式 (117).jpg", "女士款式 (118).jpg", "女士款式 (119).jpg", "女士款式 (12).jpg", "女士款式 (120).jpg", "女士款式 (121).jpg", "女士款式 (122).jpg", "女士款式 (123).jpg", "女士款式 (124).jpg", "女士款式 (125).jpg", "女士款式 (126).jpg", "女士款式 (127).jpg", "女士款式 (128).jpg", "女士款式 (129).jpg", "女士款式 (13).jpg", "女士款式 (130).jpg", "女士款式 (131).jpg", "女士款式 (132).jpg", "女士款式 (133).jpg", "女士款式 (134).jpg", "女士款式 (135).jpg", "女士款式 (136).jpg", "女士款式 (137).jpg", "女士款式 (138).jpg", "女士款式 (139).jpg", "女士款式 (14).jpg", "女士款式 (140).jpg", "女士款式 (141).jpg", "女士款式 (142).jpg", "女士款式 (143).jpg", "女士款式 (144).jpg", "女士款式 (145).jpg", "女士款式 (146).jpg", "女士款式 (147).jpg", "女士款式 (148).jpg", "女士款式 (149).jpg", "女士款式 (15).jpg", "女士款式 (150).jpg", "女士款式 (151).jpg", "女士款式 (152).jpg", "女士款式 (153).jpg", "女士款式 (154).jpg", "女士款式 (155).jpg", "女士款式 (156).jpg", "女士款式 (157).jpg", "女士款式 (158).jpg", "女士款式 (159).jpg", "女士款式 (16).jpg", "女士款式 (160).jpg", "女士款式 (161).jpg", "女士款式 (162).jpg", "女士款式 (163).jpg", "女士款式 (164).jpg", "女士款式 (165).jpg", "女士款式 (166).jpg", "女士款式 (167).jpg", "女士款式 (168).jpg", "女士款式 (169).jpg", "女士款式 (17).jpg", "女士款式 (170).jpg", "女士款式 (171).jpg", "女士款式 (172).jpg", "女士款式 (173).jpg", "女士款式 (174).jpg", "女士款式 (175).jpg", "女士款式 (176).jpg", "女士款式 (177).jpg", "女士款式 (178).jpg", "女士款式 (179).jpg", "女士款式 (18).jpg", "女士款式 (180).jpg", "女士款式 (181).jpg", "女士款式 (182).jpg", "女士款式 (183).jpg", "女士款式 (184).jpg", "女士款式 (185).jpg", "女士款式 (186).jpg", "女士款式 (187).jpg", "女士款式 (188).jpg", "女士款式 (189).jpg", "女士款式 (19).jpg", "女士款式 (190).jpg", "女士款式 (191).jpg", "女士款式 (192).jpg", "女士款式 (193).jpg", "女士款式 (194).jpg", "女士款式 (195).jpg", "女士款式 (196).jpg", "女士款式 (197).jpg", "女士款式 (198).jpg", "女士款式 (199).jpg", "女士款式 (2).jpg", "女士款式 (20).jpg", "女士款式 (200).jpg", "女士款式 (201).jpg", "女士款式 (202).jpg", "女士款式 (203).jpg", "女士款式 (204).jpg", "女士款式 (205).jpg", "女士款式 (206).jpg", "女士款式 (207).jpg", "女士款式 (208).jpg", "女士款式 (209).jpg", "女士款式 (21).jpg", "女士款式 (210).jpg", "女士款式 (211).jpg", "女士款式 (212).jpg", "女士款式 (213).jpg", "女士款式 (214).jpg", "女士款式 (215).jpg", "女士款式 (216).jpg", "女士款式 (217).jpg", "女士款式 (218).jpg", "女士款式 (219).jpg", "女士款式 (22).jpg", "女士款式 (220).jpg", "女士款式 (221).jpg", "女士款式 (222).jpg", "女士款式 (223).jpg", "女士款式 (224).jpg", "女士款式 (225).jpg", "女士款式 (226).jpg", "女士款式 (227).jpg", "女士款式 (228).jpg", "女士款式 (229).jpg", "女士款式 (23).jpg", "女士款式 (230).jpg", "女士款式 (231).jpg", "女士款式 (232).jpg", "女士款式 (233).jpg", "女士款式 (234).jpg", "女士款式 (235).jpg", "女士款式 (236).jpg", "女士款式 (237).jpg", "女士款式 (238).jpg", "女士款式 (239).jpg", "女士款式 (24).jpg", "女士款式 (240).jpg", "女士款式 (241).jpg", "女士款式 (242).jpg", "女士款式 (243).jpg", "女士款式 (244).jpg", "女士款式 (245).jpg", "女士款式 (246).jpg", "女士款式 (247).jpg", "女士款式 (248).jpg", "女士款式 (249).jpg", "女士款式 (25).jpg", "女士款式 (250).jpg", "女士款式 (251).jpg", "女士款式 (252).jpg", "女士款式 (253).jpg", "女士款式 (254).jpg", "女士款式 (255).jpg", "女士款式 (256).jpg", "女士款式 (257).jpg", "女士款式 (258).jpg", "女士款式 (259).jpg", "女士款式 (26).jpg", "女士款式 (260).jpg", "女士款式 (261).jpg", "女士款式 (262).jpg", "女士款式 (263).jpg", "女士款式 (264).jpg", "女士款式 (265).jpg", "女士款式 (266).jpg", "女士款式 (267).jpg", "女士款式 (268).jpg", "女士款式 (269).jpg", "女士款式 (27).jpg", "女士款式 (270).jpg", "女士款式 (271).jpg", "女士款式 (272).jpg", "女士款式 (273).jpg", "女士款式 (274).jpg", "女士款式 (275).jpg", "女士款式 (276).jpg", "女士款式 (277).jpg", "女士款式 (278).jpg", "女士款式 (279).jpg", "女士款式 (28).jpg", "女士款式 (280).jpg", "女士款式 (281).jpg", "女士款式 (282).jpg", "女士款式 (283).jpg", "女士款式 (284).jpg", "女士款式 (285).jpg", "女士款式 (286).jpg", "女士款式 (287).jpg", "女士款式 (288).jpg", "女士款式 (289).jpg", "女士款式 (29).jpg", "女士款式 (290).jpg", "女士款式 (291).jpg", "女士款式 (292).jpg", "女士款式 (293).jpg", "女士款式 (294).jpg", "女士款式 (295).jpg", "女士款式 (296).jpg", "女士款式 (297).jpg", "女士款式 (298).jpg", "女士款式 (299).jpg", "女士款式 (3).jpg", "女士款式 (30).jpg", "女士款式 (300).jpg", "女士款式 (301).jpg", "女士款式 (302).jpg", "女士款式 (303).jpg", "女士款式 (304).jpg", "女士款式 (305).jpg", "女士款式 (306).jpg", "女士款式 (307).jpg", "女士款式 (308).jpg", "女士款式 (309).jpg", "女士款式 (31).jpg", "女士款式 (310).jpg", "女士款式 (311).jpg", "女士款式 (312).jpg", "女士款式 (313).jpg", "女士款式 (314).jpg", "女士款式 (32).jpg", "女士款式 (33).jpg", "女士款式 (34).jpg", "女士款式 (35).jpg", "女士款式 (36).jpg", "女士款式 (37).jpg", "女士款式 (38).jpg", "女士款式 (39).jpg", "女士款式 (4).jpg", "女士款式 (40).jpg", "女士款式 (41).jpg", "女士款式 (42).jpg", "女士款式 (43).jpg", "女士款式 (44).jpg", "女士款式 (45).jpg", "女士款式 (46).jpg", "女士款式 (47).jpg", "女士款式 (48).jpg", "女士款式 (49).jpg", "女士款式 (5).jpg", "女士款式 (50).jpg", "女士款式 (51).jpg", "女士款式 (52).jpg", "女士款式 (53).jpg", "女士款式 (54).jpg", "女士款式 (55).jpg", "女士款式 (56).jpg", "女士款式 (57).jpg", "女士款式 (58).jpg", "女士款式 (59).jpg", "女士款式 (6).jpg", "女士款式 (60).jpg", "女士款式 (61).jpg", "女士款式 (62).jpg", "女士款式 (63).jpg", "女士款式 (64).jpg", "女士款式 (65).jpg", "女士款式 (66).jpg", "女士款式 (67).jpg", "女士款式 (68).jpg", "女士款式 (69).jpg", "女士款式 (7).jpg", "女士款式 (70).jpg", "女士款式 (71).jpg", "女士款式 (72).jpg", "女士款式 (73).jpg", "女士款式 (74).jpg", "女士款式 (75).jpg", "女士款式 (76).jpg", "女士款式 (77).jpg", "女士款式 (78).jpg", "女士款式 (79).jpg", "女士款式 (8).jpg", "女士款式 (80).jpg", "女士款式 (81).jpg", "女士款式 (82).jpg", "女士款式 (83).jpg", "女士款式 (84).jpg", "女士款式 (85).jpg", "女士款式 (86).jpg", "女士款式 (87).jpg", "女士款式 (88).jpg", "女士款式 (89).jpg", "女士款式 (9).jpg", "女士款式 (90).jpg", "女士款式 (91).jpg", "女士款式 (92).jpg", "女士款式 (93).jpg", "女士款式 (94).jpg", "女士款式 (95).jpg", "女士款式 (96).jpg", "女士款式 (97).jpg", "女士款式 (98).jpg", "女士款式 (99).jpg"], "children": []}, {"name": "慕斯", "rel_path": "慕斯", "images": ["慕斯款式1.jpeg", "慕斯款式2.jpeg", "慕斯款式3.jpeg", "慕斯款式4.jpg", "慕斯款式5.jpg", "慕斯款式6.jpg", "慕斯款式7.jpg", "慕斯款式8.jpg"], "children": []}, {"name": "水果", "rel_path": "水果", "images": ["水果款式 (1).jpg", "水果款式 (10).jpg", "水果款式 (100).jpg", "水果款式 (101).jpg", "水果款式 (102).jpg", "水果款式 (103).jpg", "水果款式 (104).jpg", "水果款式 (105).jpg", "水果款式 (106).jpg", "水果款式 (107).jpg", "水果款式 (108).jpg", "水果款式 (109).jpg", "水果款式 (11).jpg", "水果款式 (110).jpg", "水果款式 (111).jpg", "水果款式 (112).jpg", "水果款式 (113).jpg", "水果款式 (114).jpg", "水果款式 (115).jpg", "水果款式 (116).jpg", "水果款式 (117).jpg", "水果款式 (118).jpg", "水果款式 (119).jpg", "水果款式 (12).jpg", "水果款式 (120).jpg", "水果款式 (121).jpg", "水果款式 (122).jpg", "水果款式 (123).jpg", "水果款式 (124).jpg", "水果款式 (125).jpg", "水果款式 (126).jpg", "水果款式 (127).jpg", "水果款式 (128).jpg", "水果款式 (129).jpg", "水果款式 (13).jpg", "水果款式 (130).jpg", "水果款式 (131).jpg", "水果款式 (132).jpg", "水果款式 (133).jpg", "水果款式 (134).jpg", "水果款式 (135).jpg", "水果款式 (136).jpg", "水果款式 (137).jpg", "水果款式 (138).jpg", "水果款式 (139).jpg", "水果款式 (14).jpg", "水果款式 (140).jpg", "水果款式 (141).jpg", "水果款式 (142).jpg", "水果款式 (143).jpg", "水果款式 (144).jpg", "水果款式 (145).jpg", "水果款式 (146).jpg", "水果款式 (147).jpg", "水果款式 (148).jpg", "水果款式 (149).jpg", "水果款式 (15).jpg", "水果款式 (150).jpg", "水果款式 (151).jpg", "水果款式 (152).jpg", "水果款式 (153).jpg", "水果款式 (154).jpg", "水果款式 (155).jpg", "水果款式 (156).jpg", "水果款式 (157).jpg", "水果款式 (158).jpg", "水果款式 (159).jpg", "水果款式 (16).jpg", "水果款式 (160).jpg", "水果款式 (161).jpg", "水果款式 (162).jpg", "水果款式 (163).jpg", "水果款式 (164).jpg", "水果款式 (165).jpg", "水果款式 (166).jpg", "水果款式 (167).jpg", "水果款式 (168).jpg", "水果款式 (169).jpg", "水果款式 (17).jpg", "水果款式 (170).jpg", "水果款式 (171).jpg", "水果款式 (172).jpg", "水果款式 (173).jpg", "水果款式 (174).jpg", "水果款式 (175).jpg", "水果款式 (176).jpg", "水果款式 (177).jpg", "水果款式 (178).jpg", "水果款式 (179).jpg", "水果款式 (18).jpg", "水果款式 (180).jpg", "水果款式 (181).jpg", "水果款式 (182).jpg", "水果款式 (183).jpg", "水果款式 (184).jpg", "水果款式 (185).jpg", "水果款式 (186).jpg", "水果款式 (187).jpg", "水果款式 (188).jpg", "水果款式 (189).jpg", "水果款式 (19).jpg", "水果款式 (190).jpg", "水果款式 (191).jpg", "水果款式 (192).jpg", "水果款式 (193).jpg", "水果款式 (194).jpg", "水果款式 (195).jpg", "水果款式 (196).jpg", "水果款式 (197).jpg", "水果款式 (198).jpg", "水果款式 (199).jpg", "水果款式 (2).jpg", "水果款式 (20).jpg", "水果款式 (200).jpg", "水果款式 (201).jpg", "水果款式 (202).jpg", "水果款式 (203).jpg", "水果款式 (204).jpg", "水果款式 (205).jpg", "水果款式 (206).jpg", "水果款式 (207).jpg", "水果款式 (208).jpg", "水果款式 (209).jpg", "水果款式 (21).jpg", "水果款式 (210).jpg", "水果款式 (211).jpg", "水果款式 (212).jpg", "水果款式 (213).jpg", "水果款式 (214).jpg", "水果款式 (215).jpg", "水果款式 (216).jpg", "水果款式 (217).jpg", "水果款式 (218).jpg", "水果款式 (219).jpg", "水果款式 (22).jpg", "水果款式 (220).jpg", "水果款式 (221).jpg", "水果款式 (222).jpg", "水果款式 (223).jpg", "水果款式 (224).jpg", "水果款式 (225).jpg", "水果款式 (226).jpg", "水果款式 (227).jpg", "水果款式 (228).jpg", "水果款式 (229).jpg", "水果款式 (23).jpg", "水果款式 (230).jpg", "水果款式 (231).jpg", "水果款式 (232).jpg", "水果款式 (233).jpg", "水果款式 (234).jpg", "水果款式 (235).jpg", "水果款式 (236).jpg", "水果款式 (237).jpg", "水果款式 (238).jpg", "水果款式 (239).jpg", "水果款式 (24).jpg", "水果款式 (240).jpg", "水果款式 (241).jpg", "水果款式 (242).jpg", "水果款式 (243).jpg", "水果款式 (244).jpg", "水果款式 (245).jpg", "水果款式 (246).jpg", "水果款式 (247).jpg", "水果款式 (248).jpg", "水果款式 (249).jpg", "水果款式 (25).jpg", "水果款式 (26).jpg", "水果款式 (27).jpg", "水果款式 (28).jpg", "水果款式 (29).jpg", "水果款式 (3).jpg", "水果款式 (30).jpg", "水果款式 (31).jpg", "水果款式 (32).jpg", "水果款式 (33).jpg", "水果款式 (34).jpg", "水果款式 (35).jpg", "水果款式 (36).jpg", "水果款式 (37).jpg", "水果款式 (38).jpg", "水果款式 (39).jpg", "水果款式 (4).jpg", "水果款式 (40).jpg", "水果款式 (41).jpg", "水果款式 (42).jpg", "水果款式 (43).jpg", "水果款式 (44).jpg", "水果款式 (45).jpg", "水果款式 (46).jpg", "水果款式 (47).jpg", "水果款式 (48).jpg", "水果款式 (49).jpg", "水果款式 (5).jpg", "水果款式 (50).jpg", "水果款式 (51).jpg", "水果款式 (52).jpg", "水果款式 (53).jpg", "水果款式 (54).jpg", "水果款式 (55).jpg", "水果款式 (56).jpg", "水果款式 (57).jpg", "水果款式 (58).jpg", "水果款式 (59).jpg", "水果款式 (6).jpg", "水果款式 (60).jpg", "水果款式 (61).jpg", "水果款式 (62).jpg", "水果款式 (63).jpg", "水果款式 (64).jpg", "水果款式 (65).jpg", "水果款式 (66).jpg", "水果款式 (67).jpg", "水果款式 (68).jpg", "水果款式 (69).jpg", "水果款式 (7).jpg", "水果款式 (70).jpg", "水果款式 (71).jpg", "水果款式 (72).jpg", "水果款式 (73).jpg", "水果款式 (74).jpg", "水果款式 (75).jpg", "水果款式 (76).jpg", "水果款式 (77).jpg", "水果款式 (78).jpg", "水果款式 (79).jpg", "水果款式 (8).jpg", "水果款式 (80).jpg", "水果款式 (81).jpg", "水果款式 (82).jpg", "水果款式 (83).jpg", "水果款式 (84).jpg", "水果款式 (85).jpg", "水果款式 (86).jpg", "水果款式 (87).jpg", "水果款式 (88).jpg", "水果款式 (89).jpg", "水果款式 (9).jpg", "水果款式 (90).jpg", "水果款式 (91).jpg", "水果款式 (92).jpg", "水果款式 (93).jpg", "水果款式 (94).jpg", "水果款式 (95).jpg", "水果款式 (96).jpg", "水果款式 (97).jpg", "水果款式 (98).jpg", "水果款式 (99).jpg"], "children": []}, {"name": "爸爸款", "rel_path": "爸爸款", "images": ["爸爸款式1.jpg", "爸爸款式10.jpg", "爸爸款式11.jpg", "爸爸款式12.jpg", "爸爸款式13.jpg", "爸爸款式14.jpg", "爸爸款式15.jpg", "爸爸款式16.jpg", "爸爸款式17.jpg", "爸爸款式18.jpg", "爸爸款式19.jpg", "爸爸款式2.jpg", "爸爸款式20.jpg", "爸爸款式21.jpg", "爸爸款式22.jpg", "爸爸款式23.jpg", "爸爸款式25.jpg", "爸爸款式26.jpg", "爸爸款式27.jpg", "爸爸款式28.jpg", "爸爸款式29.jpg", "爸爸款式3.jpg", "爸爸款式30.jpg", "爸爸款式31.jpg", "爸爸款式32.jpg", "爸爸款式33.jpg", "爸爸款式35.jpg", "爸爸款式36.jpg", "爸爸款式37.jpg", "爸爸款式38.jpg", "爸爸款式39.jpg", "爸爸款式4.jpg", "爸爸款式40.jpg", "爸爸款式41.jpg", "爸爸款式42.jpg", "爸爸款式43.jpg", "爸爸款式45.jpg", "爸爸款式46.jpg", "爸爸款式47.jpg", "爸爸款式49.jpg", "爸爸款式5.jpg", "爸爸款式6.jpg", "爸爸款式7.jpg", "爸爸款式8.jpg", "爸爸款式9.jpg"], "children": []}, {"name": "男士", "rel_path": "男士", "images": ["男士款式 (1).jpg", "男士款式 (10).jpg", "男士款式 (100).jpg", "男士款式 (101).jpg", "男士款式 (102).jpg", "男士款式 (103).jpg", "男士款式 (104).jpg", "男士款式 (105).jpg", "男士款式 (106).jpg", "男士款式 (107).jpg", "男士款式 (108).jpg", "男士款式 (109).jpg", "男士款式 (11).jpg", "男士款式 (110).jpg", "男士款式 (111).jpg", "男士款式 (112).jpg", "男士款式 (113).jpg", "男士款式 (114).jpg", "男士款式 (115).jpg", "男士款式 (116).jpg", "男士款式 (117).jpg", "男士款式 (118).jpg", "男士款式 (119).jpg", "男士款式 (12).jpg", "男士款式 (120).jpg", "男士款式 (121).jpg", "男士款式 (122).jpg", "男士款式 (123).jpg", "男士款式 (124).jpg", "男士款式 (125).jpg", "男士款式 (126).jpg", "男士款式 (127).jpg", "男士款式 (128).jpg", "男士款式 (129).jpg", "男士款式 (13).jpg", "男士款式 (130).jpg", "男士款式 (131).jpg", "男士款式 (132).jpg", "男士款式 (133).jpg", "男士款式 (134).jpg", "男士款式 (135).jpg", "男士款式 (136).jpg", "男士款式 (137).jpg", "男士款式 (138).jpg", "男士款式 (139).jpg", "男士款式 (14).jpg", "男士款式 (140).jpg", "男士款式 (141).jpg", "男士款式 (142).jpg", "男士款式 (143).jpg", "男士款式 (144).jpg", "男士款式 (145).jpg", "男士款式 (146).jpg", "男士款式 (147).jpg", "男士款式 (148).jpg", "男士款式 (149).jpg", "男士款式 (15).jpg", "男士款式 (150).jpg", "男士款式 (151).jpg", "男士款式 (152).jpg", "男士款式 (153).jpg", "男士款式 (154).jpg", "男士款式 (155).jpg", "男士款式 (156).jpg", "男士款式 (157).jpg", "男士款式 (158).jpg", "男士款式 (159).jpg", "男士款式 (16).jpg", "男士款式 (160).jpg", "男士款式 (161).jpg", "男士款式 (162).jpg", "男士款式 (163).jpg", "男士款式 (164).jpg", "男士款式 (17).jpg", "男士款式 (18).jpg", "男士款式 (19).jpg", "男士款式 (2).jpg", "男士款式 (20).jpg", "男士款式 (21).jpg", "男士款式 (22).jpg", "男士款式 (23).jpg", "男士款式 (24).jpg", "男士款式 (25).jpg", "男士款式 (26).jpg", "男士款式 (27).jpg", "男士款式 (28).jpg", "男士款式 (29).jpg", "男士款式 (3).jpg", "男士款式 (30).jpg", "男士款式 (31).jpg", "男士款式 (32).jpg", "男士款式 (33).jpg", "男士款式 (34).jpg", "男士款式 (35).jpg", "男士款式 (36).jpg", "男士款式 (37).jpg", "男士款式 (38).jpg", "男士款式 (39).jpg", "男士款式 (4).jpg", "男士款式 (40).jpg", "男士款式 (41).jpg", "男士款式 (42).jpg", "男士款式 (43).jpg", "男士款式 (44).jpg", "男士款式 (45).jpg", "男士款式 (46).jpg", "男士款式 (47).jpg", "男士款式 (48).jpg", "男士款式 (49).jpg", "男士款式 (5).jpg", "男士款式 (50).jpg", "男士款式 (51).jpg", "男士款式 (52).jpg", "男士款式 (53).jpg", "男士款式 (54).jpg", "男士款式 (55).jpg", "男士款式 (56).jpg", "男士款式 (57).jpg", "男士款式 (58).jpg", "男士款式 (59).jpg", "男士款式 (6).jpg", "男士款式 (60).jpg", "男士款式 (61).jpg", "男士款式 (62).jpg", "男士款式 (63).jpg", "男士款式 (64).jpg", "男士款式 (65).jpg", "男士款式 (66).jpg", "男士款式 (67).jpg", "男士款式 (68).jpg", "男士款式 (69).jpg", "男士款式 (7).jpg", "男士款式 (70).jpg", "男士款式 (71).jpg", "男士款式 (72).jpg", "男士款式 (73).jpg", "男士款式 (74).jpg", "男士款式 (75).jpg", "男士款式 (76).jpg", "男士款式 (77).jpg", "男士款式 (78).jpg", "男士款式 (79).jpg", "男士款式 (8).jpg", "男士款式 (80).jpg", "男士款式 (81).jpg", "男士款式 (82).jpg", "男士款式 (83).jpg", "男士款式 (84).jpg", "男士款式 (85).jpg", "男士款式 (86).jpg", "男士款式 (87).jpg", "男士款式 (88).jpg", "男士款式 (89).jpg", "男士款式 (9).jpg", "男士款式 (90).jpg", "男士款式 (91).jpg", "男士款式 (92).jpg", "男士款式 (93).jpg", "男士款式 (94).jpg", "男士款式 (95).jpg", "男士款式 (96).jpg", "男士款式 (97).jpg", "男士款式 (98).jpg", "男士款式 (99).jpg"], "children": []}, {"name": "男童", "rel_path": "男童", "images": [], "children": [{"name": "创意造型", "rel_path": "男童/创意造型", "images": ["儿童男款 (109).jpg", "儿童男款 (110).jpg", "儿童男款 (12).jpg", "儿童男款 (156).jpg", "儿童男款 (169).jpg", "儿童男款 (175).jpg", "儿童男款 (176).jpg", "儿童男款 (207).jpg", "儿童男款 (209).jpg", "儿童男款 (21).jpg", "儿童男款 (216).jpg", "儿童男款 (23).jpg", "儿童男款 (231).jpg", "儿童男款 (236).jpg", "儿童男款 (238).jpg", "儿童男款 (244).jpg", "儿童男款 (246).jpg", "儿童男款 (249).jpg", "儿童男款 (251).jpg", "儿童男款 (268).jpg", "儿童男款 (270).jpg", "儿童男款 (274).jpg", "儿童男款 (279).jpg", "儿童男款 (292).jpg", "儿童男款 (294).jpg", "儿童男款 (310).jpg", "儿童男款 (311).jpg", "儿童男款 (327).jpg", "儿童男款 (351).jpg", "儿童男款 (377).jpg", "儿童男款 (39).jpg", "儿童男款 (399).jpg", "儿童男款 (425).jpg", "儿童男款 (430).jpg", "儿童男款 (44).jpg", "儿童男款 (58).jpg", "儿童男款 (6).jpg", "儿童男款 (65).jpg", "儿童男款 (75).jpg", "儿童男款 (77).jpg", "儿童男款 (95).jpg", "儿童男款 (97).jpg"], "children": []}, {"name": "动漫公仔", "rel_path": "男童/动漫公仔", "images": [], "children": [{"name": "JOJO", "rel_path": "男童/动漫公仔/JOJO", "images": ["儿童男款 (126).jpg", "儿童男款 (147).jpg", "儿童男款 (164).jpg", "儿童男款 (83).jpg"], "children": []}, {"name": "叮当猫", "rel_path": "男童/动漫公仔/叮当猫", "images": ["儿童男款 (121).jpg", "儿童男款 (135).jpg", "儿童男款 (139).jpg", "儿童男款 (157).jpg", "儿童男款 (185).jpg", "儿童男款 (3).jpg", "儿童男款 (30).jpg", "儿童男款 (325).jpg", "儿童男款 (365).jpg", "儿童男款 (63).jpg"], "children": []}, {"name": "吃鸡款式", "rel_path": "男童/动漫公仔/吃鸡款式", "images": ["儿童男款 (1).png", "儿童男款 (127).jpg", "儿童男款 (128).jpg", "儿童男款 (166).jpg", "儿童男款 (199).jpg", "儿童男款 (262).jpg", "儿童男款 (300).jpg", "儿童男款 (304).jpg", "儿童男款 (318).jpg", "儿童男款 (338).jpg", "儿童男款 (341).jpg", "儿童男款 (375).jpg", "儿童男款 (395).jpg", "儿童男款 (416).jpg", "儿童男款 (431).jpg", "儿童男款 (85).jpg"], "children": []}, {"name": "哪吒", "rel_path": "男童/动漫公仔/哪吒", "images": ["儿童男款 (13).jpg", "儿童男款 (17).jpg", "儿童男款 (297).jpg", "儿童男款 (324).jpg", "儿童男款 (33).jpg", "儿童男款 (336).jpg", "儿童男款 (43).jpg", "儿童男款 (47).jpg"], "children": []}, {"name": "奥特曼款式", "rel_path": "男童/动漫公仔/奥特曼款式", "images": ["儿童男款 (125).jpg", "儿童男款 (131).jpg", "儿童男款 (136).jpg", "儿童男款 (142).jpg", "儿童男款 (15).jpg", "儿童男款 (158).jpg", "儿童男款 (172).jpg", "儿童男款 (183).jpg", "儿童男款 (188).jpg", "儿童男款 (193).jpg", "儿童男款 (20).jpg", "儿童男款 (208).jpg", "儿童男款 (210).jpg", "儿童男款 (211).jpg", "儿童男款 (218).jpg", "儿童男款 (222).jpg", "儿童男款 (225).jpg", "儿童男款 (237).jpg", "儿童男款 (239).jpg", "儿童男款 (242).jpg", "儿童男款 (260).jpg", "儿童男款 (267).jpg", "儿童男款 (276).jpg", "儿童男款 (284).jpg", "儿童男款 (287).jpg", "儿童男款 (296).jpg", "儿童男款 (305).jpg", "儿童男款 (32).jpg", "儿童男款 (372).jpg", "儿童男款 (407).jpg", "儿童男款 (415).jpg", "儿童男款 (418).jpg", "儿童男款 (427).jpg", "儿童男款 (433).jpg", "儿童男款 (5).jpg", "儿童男款 (51).jpg", "儿童男款 (52).jpg", "儿童男款 (60).jpg", "儿童男款 (62).jpg", "儿童男款 (64).jpg", "儿童男款 (66).jpg", "儿童男款 (70).jpg", "儿童男款 (73).jpg", "儿童男款 (80).jpg", "儿童男款 (90).jpg", "儿童男款 (99).jpg"], "children": []}, {"name": "宇航员", "rel_path": "男童/动漫公仔/宇航员", "images": ["儿童男款 (114).jpg", "儿童男款 (115).jpg", "儿童男款 (123).jpg", "儿童男款 (138).jpg", "儿童男款 (140).jpg", "儿童男款 (155).jpg", "儿童男款 (173).jpg", "儿童男款 (198).jpg", "儿童男款 (241).jpg", "儿童男款 (266).jpg", "儿童男款 (42).jpg", "儿童男款 (432).jpg", "儿童男款 (61).jpg"], "children": []}, {"name": "小猪佩奇", "rel_path": "男童/动漫公仔/小猪佩奇", "images": ["儿童男款 (223).jpg", "儿童男款 (273).jpg", "儿童男款 (317).jpg", "儿童男款 (322).jpg", "儿童男款 (356).jpg", "儿童男款 (41).jpg"], "children": []}, {"name": "小王子", "rel_path": "男童/动漫公仔/小王子", "images": ["儿童男款 (150).jpg", "儿童男款 (160).jpg", "儿童男款 (212).jpg", "儿童男款 (214).jpg", "儿童男款 (219).jpg", "儿童男款 (24).jpg", "儿童男款 (282).jpg", "儿童男款 (307).jpg", "儿童男款 (309).jpg", "儿童男款 (319).jpg", "儿童男款 (37).jpg", "儿童男款 (405).jpg", "儿童男款 (409).jpg", "儿童男款 (412).jpg", "儿童男款 (426).jpg", "儿童男款 (71).jpg"], "children": []}, {"name": "恐龙", "rel_path": "男童/动漫公仔/恐龙", "images": ["儿童男款 (103).jpg", "儿童男款 (107).jpg", "儿童男款 (124).jpg", "儿童男款 (255).jpg", "儿童男款 (289).jpg", "儿童男款 (355).jpg", "儿童男款 (439).jpg", "儿童男款 (98).jpg"], "children": []}, {"name": "悟空龙珠", "rel_path": "男童/动漫公仔/悟空龙珠", "images": ["儿童男款 (105).jpg", "儿童男款 (116).jpg", "儿童男款 (143).jpg", "儿童男款 (148).jpg", "儿童男款 (184).jpg", "儿童男款 (201).jpg", "儿童男款 (203).jpg", "儿童男款 (213).jpg", "儿童男款 (220).jpg", "儿童男款 (228).jpg", "儿童男款 (232).jpg", "儿童男款 (240).jpg", "儿童男款 (339).jpg", "儿童男款 (340).jpg"], "children": []}, {"name": "挖机工程车", "rel_path": "男童/动漫公仔/挖机工程车", "images": ["儿童男款 (1).jpg", "儿童男款 (111).jpg", "儿童男款 (133).jpg", "儿童男款 (134).jpg", "儿童男款 (144).jpg", "儿童男款 (153).jpg", "儿童男款 (177).jpg", "儿童男款 (180).jpg", "儿童男款 (187).jpg", "儿童男款 (194).jpg", "儿童男款 (195).jpg", "儿童男款 (258).jpg", "儿童男款 (320).jpg", "儿童男款 (347).jpg", "儿童男款 (379).jpg", "儿童男款 (383).jpg", "儿童男款 (438).jpg", "儿童男款 (48).jpg", "儿童男款 (7).jpg", "儿童男款 (84).jpg"], "children": []}, {"name": "木马", "rel_path": "男童/动漫公仔/木马", "images": ["儿童男款 (28).jpg", "儿童男款 (363).jpg", "儿童男款 (368).jpg", "儿童男款 (40).jpg", "儿童男款 (410).jpg"], "children": []}, {"name": "机甲赛车类", "rel_path": "男童/动漫公仔/机甲赛车类", "images": ["儿童男款 (10).jpg", "儿童男款 (154).jpg", "儿童男款 (192).jpg", "儿童男款 (204).jpg", "儿童男款 (233).jpg", "儿童男款 (243).jpg", "儿童男款 (263).jpg", "儿童男款 (281).jpg", "儿童男款 (283).jpg", "儿童男款 (285).jpg", "儿童男款 (295).jpg", "儿童男款 (303).jpg", "儿童男款 (306).jpg", "儿童男款 (316).jpg", "儿童男款 (323).jpg", "儿童男款 (326).jpg", "儿童男款 (333).jpg", "儿童男款 (334).jpg", "儿童男款 (362).jpg", "儿童男款 (364).jpg", "儿童男款 (373).jpg", "儿童男款 (428).jpg", "儿童男款 (46).jpg", "儿童男款 (91).jpg"], "children": []}, {"name": "比卡丘", "rel_path": "男童/动漫公仔/比卡丘", "images": ["儿童男款 (130).jpg", "儿童男款 (302).jpg", "儿童男款 (313).jpg", "儿童男款 (330).jpg", "儿童男款 (400).jpg", "儿童男款 (434).jpg", "儿童男款 (87).jpg"], "children": []}, {"name": "汪汪队", "rel_path": "男童/动漫公仔/汪汪队", "images": ["儿童男款 (104).jpg", "儿童男款 (16).jpg", "儿童男款 (162).jpg", "儿童男款 (165).jpg", "儿童男款 (179).jpg", "儿童男款 (247).jpg", "儿童男款 (272).jpg", "儿童男款 (299).jpg", "儿童男款 (8).jpg", "儿童男款 (86).jpg"], "children": []}, {"name": "熊大熊二", "rel_path": "男童/动漫公仔/熊大熊二", "images": ["儿童男款 (168).jpg", "儿童男款 (200).jpg", "儿童男款 (221).jpg", "儿童男款 (332).jpg"], "children": []}, {"name": "篮球", "rel_path": "男童/动漫公仔/篮球", "images": ["儿童男款 (100).jpg", "儿童男款 (18).jpg", "儿童男款 (197).jpg", "儿童男款 (2).jpg", "儿童男款 (252).jpg", "儿童男款 (265).jpg", "儿童男款 (27).jpg", "儿童男款 (337).jpg", "儿童男款 (348).jpg", "儿童男款 (366).jpg", "儿童男款 (367).jpg", "儿童男款 (394).jpg", "儿童男款 (401).jpg", "儿童男款 (413).jpg", "儿童男款 (422).jpg", "儿童男款 (440).jpg", "儿童男款 (57).jpg", "儿童男款 (9).jpg", "儿童男款 (93).jpg"], "children": []}, {"name": "米奇迪斯尼", "rel_path": "男童/动漫公仔/米奇迪斯尼", "images": ["儿童男款 (102).jpg", "儿童男款 (117).jpg", "儿童男款 (151).jpg", "儿童男款 (182).jpg", "儿童男款 (235).jpg", "儿童男款 (248).jpg", "儿童男款 (256).jpg", "儿童男款 (261).jpg", "儿童男款 (397).jpg", "儿童男款 (4).jpg", "儿童男款 (404).jpg", "儿童男款 (408).jpg", "儿童男款 (419).jpg", "儿童男款 (421).jpg", "儿童男款 (54).jpg", "儿童男款 (55).jpg", "儿童男款 (76).jpg", "儿童男款 (88).jpg"], "children": []}, {"name": "英雄联盟类", "rel_path": "男童/动漫公仔/英雄联盟类", "images": ["儿童男款 (106).jpg", "儿童男款 (112).jpg", "儿童男款 (120).jpg", "儿童男款 (167).jpg", "儿童男款 (170).jpg", "儿童男款 (174).jpg", "儿童男款 (178).jpg", "儿童男款 (189).jpg", "儿童男款 (190).jpg", "儿童男款 (205).jpg", "儿童男款 (206).jpg", "儿童男款 (254).jpg", "儿童男款 (264).jpg", "儿童男款 (277).jpg", "儿童男款 (286).jpg", "儿童男款 (290).jpg", "儿童男款 (298).jpg", "儿童男款 (308).jpg", "儿童男款 (312).jpg", "儿童男款 (314).jpg", "儿童男款 (329).jpg", "儿童男款 (331).jpg", "儿童男款 (335).jpg", "儿童男款 (345).jpg", "儿童男款 (346).jpg", "儿童男款 (349).jpg", "儿童男款 (369).jpg", "儿童男款 (380).jpg", "儿童男款 (381).jpg", "儿童男款 (417).jpg", "儿童男款 (68).jpg", "儿童男款 (96).jpg"], "children": []}, {"name": "蛋仔", "rel_path": "男童/动漫公仔/蛋仔", "images": ["儿童男款 (45).jpg", "儿童男款 (89).jpg"], "children": []}, {"name": "足球款式", "rel_path": "男童/动漫公仔/足球款式", "images": ["儿童男款 (122).jpg", "儿童男款 (137).jpg", "儿童男款 (26).jpg", "儿童男款 (31).jpg", "儿童男款 (328).jpg", "儿童男款 (35).jpg", "儿童男款 (429).jpg", "儿童男款 (437).jpg", "儿童男款 (78).jpg", "儿童男款 (92).jpg", "儿童男款 (94).jpg"], "children": []}]}, {"name": "简单手绘", "rel_path": "男童/简单手绘", "images": ["儿童男款 (108).jpg", "儿童男款 (113).jpg", "儿童男款 (119).jpg", "儿童男款 (129).jpg", "儿童男款 (145).jpg", "儿童男款 (152).jpg", "儿童男款 (159).jpg", "儿童男款 (181).jpg", "儿童男款 (19).jpg", "儿童男款 (202).jpg", "儿童男款 (234).jpg", "儿童男款 (245).jpg", "儿童男款 (278).jpg", "儿童男款 (293).jpg", "儿童男款 (34).jpg", "儿童男款 (350).jpg", "儿童男款 (352).jpg", "儿童男款 (374).jpg", "儿童男款 (382).jpg", "儿童男款 (398).jpg", "儿童男款 (402).jpg", "儿童男款 (403).jpg", "儿童男款 (406).jpg", "儿童男款 (423).jpg", "儿童男款 (56).jpg", "儿童男款 (59).jpg", "儿童男款 (67).jpg"], "children": []}, {"name": "翻糖巧克力配件", "rel_path": "男童/翻糖巧克力配件", "images": ["儿童男款 (11).jpg", "儿童男款 (14).jpg", "儿童男款 (141).jpg", "儿童男款 (161).jpg", "儿童男款 (191).jpg", "儿童男款 (196).jpg", "儿童男款 (22).jpg", "儿童男款 (25).jpg", "儿童男款 (36).jpg", "儿童男款 (38).jpg", "儿童男款 (49).jpg", "儿童男款 (50).jpg", "儿童男款 (53).jpg", "儿童男款 (72).jpg", "儿童男款 (79).jpg", "儿童男款 (81).jpg", "儿童男款 (82).jpg"], "children": []}]}, {"name": "祝寿款", "rel_path": "祝寿款", "images": ["贺寿款式 (1).jpg", "贺寿款式 (10).jpg", "贺寿款式 (100).jpg", "贺寿款式 (101).jpg", "贺寿款式 (102).jpg", "贺寿款式 (103).jpg", "贺寿款式 (104).jpg", "贺寿款式 (105).jpg", "贺寿款式 (106).jpg", "贺寿款式 (107).jpg", "贺寿款式 (108).jpg", "贺寿款式 (109).jpg", "贺寿款式 (11).jpg", "贺寿款式 (110).jpg", "贺寿款式 (111).jpg", "贺寿款式 (112).jpg", "贺寿款式 (113).jpg", "贺寿款式 (114).jpg", "贺寿款式 (115).jpg", "贺寿款式 (12).jpg", "贺寿款式 (13).jpg", "贺寿款式 (14).jpg", "贺寿款式 (15).jpg", "贺寿款式 (16).jpg", "贺寿款式 (17).jpg", "贺寿款式 (18).jpg", "贺寿款式 (19).jpg", "贺寿款式 (2).jpg", "贺寿款式 (20).jpg", "贺寿款式 (21).jpg", "贺寿款式 (22).jpg", "贺寿款式 (23).jpg", "贺寿款式 (24).jpg", "贺寿款式 (25).jpg", "贺寿款式 (26).jpg", "贺寿款式 (27).jpg", "贺寿款式 (28).jpg", "贺寿款式 (29).jpg", "贺寿款式 (3).jpg", "贺寿款式 (30).jpg", "贺寿款式 (31).jpg", "贺寿款式 (32).jpg", "贺寿款式 (33).jpg", "贺寿款式 (34).jpg", "贺寿款式 (35).jpg", "贺寿款式 (36).jpg", "贺寿款式 (37).jpg", "贺寿款式 (38).jpg", "贺寿款式 (39).jpg", "贺寿款式 (4).jpg", "贺寿款式 (40).jpg", "贺寿款式 (41).jpg", "贺寿款式 (42).jpg", "贺寿款式 (43).jpg", "贺寿款式 (44).jpg", "贺寿款式 (45).jpg", "贺寿款式 (46).jpg", "贺寿款式 (47).jpg", "贺寿款式 (48).jpg", "贺寿款式 (49).jpg", "贺寿款式 (5).jpg", "贺寿款式 (50).jpg", "贺寿款式 (51).jpg", "贺寿款式 (52).jpg", "贺寿款式 (53).jpg", "贺寿款式 (54).jpg", "贺寿款式 (55).jpg", "贺寿款式 (56).jpg", "贺寿款式 (57).jpg", "贺寿款式 (58).jpg", "贺寿款式 (59).jpg", "贺寿款式 (6).jpg", "贺寿款式 (60).jpg", "贺寿款式 (61).jpg", "贺寿款式 (62).jpg", "贺寿款式 (63).jpg", "贺寿款式 (64).jpg", "贺寿款式 (65).jpg", "贺寿款式 (66).jpg", "贺寿款式 (67).jpg", "贺寿款式 (68).jpg", "贺寿款式 (69).jpg", "贺寿款式 (7).jpg", "贺寿款式 (70).jpg", "贺寿款式 (71).jpg", "贺寿款式 (72).jpg", "贺寿款式 (73).jpg", "贺寿款式 (74).jpg", "贺寿款式 (75).jpg", "贺寿款式 (76).jpg", "贺寿款式 (77).jpg", "贺寿款式 (78).jpg", "贺寿款式 (79).jpg", "贺寿款式 (8).jpg", "贺寿款式 (80).jpg", "贺寿款式 (81).jpg", "贺寿款式 (82).jpg", "贺寿款式 (83).jpg", "贺寿款式 (84).jpg", "贺寿款式 (85).jpg", "贺寿款式 (86).jpg", "贺寿款式 (87).jpg", "贺寿款式 (88).jpg", "贺寿款式 (89).jpg", "贺寿款式 (9).jpg", "贺寿款式 (90).jpg", "贺寿款式 (91).jpg", "贺寿款式 (92).jpg", "贺寿款式 (93).jpg", "贺寿款式 (94).jpg", "贺寿款式 (95).jpg", "贺寿款式 (96).jpg", "贺寿款式 (97).jpg", "贺寿款式 (98).jpg", "贺寿款式 (99).jpg"], "children": []}];
-        const ENABLE_THUMBNAIL = true;  // 传递给前端
+        const ENABLE_THUMBNAIL = true;
 
         let currentNode = null;
         let currentImages = [];
@@ -243,89 +237,94 @@
         const nextBtn = document.getElementById('next-showcase');
         const previewContainer = document.getElementById('preview-container');
         const previewImg = document.getElementById('preview-img');
+        const previewFilename = document.getElementById('preview-filename');
 
-        // ---------- 懒加载 Intersection Observer ----------
-        const lazyObserver = new IntersectionObserver((entries, observer) => {
+        // 辅助函数：去除文件名后缀
+        function removeExtension(filename) {
+            return filename.replace(/\.[^/.]+$/, '');
+        }
+
+        // 懒加载
+        const lazyObserver = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     const img = entry.target;
                     const dataSrc = img.getAttribute('data-src');
-                    if (dataSrc) {
+                    if (dataSrc && !img.src) {
                         img.src = dataSrc;
                         img.removeAttribute('data-src');
-                        observer.unobserve(img);
                     }
                 }
             });
-        }, {
-            rootMargin: '100px',
-            threshold: 0.01
-        });
+        }, { rootMargin: '100px', threshold: 0.01 });
 
         function observeLazyImages() {
             document.querySelectorAll('img[data-src]').forEach(img => lazyObserver.observe(img));
         }
 
-        // 递归渲染树
-        function renderTree(nodes, parentElement, level = 0) {
+        // 渲染树
+        function renderTree(nodes, parentElement) {
             nodes.forEach(node => {
                 const li = document.createElement('li');
-                li.style.paddingLeft = (level * 20) + 'px';
                 li.dataset.path = node.rel_path;
 
                 const hasChildren = node.children && node.children.length > 0;
                 const hasImages = node.images && node.images.length > 0;
 
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'node-row';
+
+                const iconSpan = document.createElement('span');
+                iconSpan.className = 'icon';
                 if (hasChildren) {
-                    const toggleSpan = document.createElement('span');
-                    toggleSpan.className = 'toggle';
-                    toggleSpan.textContent = '▼';
-                    toggleSpan.onclick = function(e) {
+                    iconSpan.innerHTML = '<i class="fas fa-chevron-right"></i>';
+                    iconSpan.addEventListener('click', (e) => {
                         e.stopPropagation();
                         const content = li.querySelector('.folder-content');
                         if (content) {
-                            if (content.style.display === 'none') {
-                                content.style.display = 'block';
-                                toggleSpan.textContent = '▼';
+                            content.classList.toggle('collapsed');
+                            const i = iconSpan.querySelector('i');
+                            if (content.classList.contains('collapsed')) {
+                                i.className = 'fas fa-chevron-right';
                             } else {
-                                content.style.display = 'none';
-                                toggleSpan.textContent = '▶';
+                                i.className = 'fas fa-chevron-down';
                             }
                         }
-                    };
-                    li.appendChild(toggleSpan);
+                    });
+                } else {
+                    iconSpan.innerHTML = '<i class="fas fa-circle" style="font-size: 0.4rem; vertical-align: middle;"></i>';
+                }
+                rowDiv.appendChild(iconSpan);
 
-                    const nameSpan = document.createElement('span');
-                    nameSpan.className = 'node-folder' + (hasImages ? ' clickable' : '');
-                    nameSpan.textContent = node.name + (hasImages ? ` (${node.images.length})` : '');
-                    if (hasImages) {
-                        nameSpan.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            document.querySelectorAll('.tree .active').forEach(el => el.classList.remove('active'));
-                            li.classList.add('active');
-                            switchNode(node);
-                        });
-                    }
-                    li.appendChild(nameSpan);
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'name' + (hasImages ? ' clickable' : '');
+                nameSpan.textContent = node.name;
+                if (hasImages) {
+                    const badge = document.createElement('span');
+                    badge.className = 'badge';
+                    badge.textContent = node.images.length;
+                    nameSpan.appendChild(badge);
+                }
 
+                if (hasImages) {
+                    nameSpan.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        document.querySelectorAll('.tree .name.active').forEach(el => el.classList.remove('active'));
+                        nameSpan.classList.add('active');
+                        switchNode(node);
+                    });
+                }
+
+                rowDiv.appendChild(nameSpan);
+                li.appendChild(rowDiv);
+
+                if (hasChildren) {
                     const childUl = document.createElement('ul');
                     childUl.className = 'folder-content';
                     li.appendChild(childUl);
-                    renderTree(node.children, childUl, level + 1);
-                } else if (hasImages) {
-                    const nameSpan = document.createElement('span');
-                    nameSpan.className = 'node-leaf clickable';
-                    nameSpan.textContent = node.name + ` (${node.images.length})`;
-                    nameSpan.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        document.querySelectorAll('.tree .active').forEach(el => el.classList.remove('active'));
-                        li.classList.add('active');
-                        switchNode(node);
-                    });
-                    li.appendChild(nameSpan);
-                } else {
-                    return;
+                    renderTree(node.children, childUl);
                 }
+
                 parentElement.appendChild(li);
             });
         }
@@ -341,7 +340,6 @@
         function updateShowcase() {
             const images = currentImages;
             const total = images.length;
-
             showcaseImagesEl.innerHTML = '';
 
             if (total === 0) {
@@ -360,10 +358,10 @@
             indices.forEach(idx => {
                 const imgName = images[idx];
                 const imgPath = `${currentNode.rel_path}/${imgName}`;
+                const displayName = removeExtension(imgName); // 无后缀名
                 const div = document.createElement('div');
                 div.className = 'showcase-item';
-                // 展示区图片数量少，直接加载原图（或缩略图？这里保留原图以保证清晰）
-                div.innerHTML = `<img src="${imgPath}" alt="${imgName}" loading="lazy"><p>${imgName}</p>`;
+                div.innerHTML = `<img src="${imgPath}" alt="${displayName}" loading="lazy" onerror="this.src='${imgPath}'; this.onerror=null;"><p>${displayName}</p>`;
                 showcaseImagesEl.appendChild(div);
             });
 
@@ -382,31 +380,29 @@
             }
 
             images.forEach(imgName => {
-                let thumbPath, fullPath;
+                const fullPath = `${folder}/${imgName}`;
+                let thumbPath = fullPath;
                 if (ENABLE_THUMBNAIL) {
-                    // 缩略图路径：__thumbs__/相对路径/图片名
                     thumbPath = `__thumbs__/${folder}/${imgName}`;
-                    fullPath = `${folder}/${imgName}`;
-                } else {
-                    thumbPath = fullPath = `${folder}/${imgName}`;
                 }
 
                 const img = document.createElement('img');
-                img.setAttribute('data-src', thumbPath);   // 懒加载缩略图
-                if (ENABLE_THUMBNAIL) {
-                    img.setAttribute('data-fullsrc', fullPath); // 存储原图路径供预览
-                }
-                img.alt = imgName;
-                img.style.backgroundColor = '#eee';
+                img.setAttribute('data-src', thumbPath);
+                img.setAttribute('data-fullsrc', fullPath);
+                img.alt = removeExtension(imgName); // 用于预览显示文件名
 
-                // 预览功能：鼠标移入时显示原图
-                img.addEventListener('mouseenter', () => {
-                    // 如果有data-fullsrc则使用原图，否则使用缩略图（即未启用缩略图的情况）
-                    const src = img.getAttribute('data-fullsrc') || img.src || img.getAttribute('data-src');
-                    if (src) {
-                        previewImg.src = src;
-                        previewContainer.style.display = 'block';
+                img.onerror = function() {
+                    if (this.src !== this.getAttribute('data-fullsrc')) {
+                        this.src = this.getAttribute('data-fullsrc');
+                        this.onerror = null;
                     }
+                };
+
+                // 鼠标移入：显示预览大图和文件名（无后缀）
+                img.addEventListener('mouseenter', () => {
+                    previewImg.src = fullPath;
+                    previewFilename.textContent = removeExtension(imgName);
+                    previewContainer.style.display = 'block';
                 });
                 img.addEventListener('mouseleave', () => {
                     previewContainer.style.display = 'none';
@@ -415,6 +411,16 @@
                 galleryGridEl.appendChild(img);
             });
 
+            // 强制前6张立即加载
+            const imgs = galleryGridEl.querySelectorAll('img');
+            for (let i = 0; i < Math.min(6, imgs.length); i++) {
+                const img = imgs[i];
+                const dataSrc = img.getAttribute('data-src');
+                if (dataSrc) {
+                    img.src = dataSrc;
+                    img.removeAttribute('data-src');
+                }
+            }
             observeLazyImages();
         }
 
@@ -432,7 +438,7 @@
             updateShowcase();
         }
 
-        // 初始化：渲染树并选中第一个有图片的节点
+        // 初始化
         window.onload = function() {
             renderTree(treeData, treeEl);
 
@@ -450,10 +456,11 @@
             if (firstNode) {
                 setTimeout(() => {
                     switchNode(firstNode);
-                    const lis = document.querySelectorAll('.tree li');
-                    for (let li of lis) {
-                        if (li.dataset.path === firstNode.rel_path) {
-                            li.classList.add('active');
+                    const allNames = document.querySelectorAll('.tree .name');
+                    for (let nameSpan of allNames) {
+                        const li = nameSpan.closest('li');
+                        if (li && li.dataset.path === firstNode.rel_path) {
+                            nameSpan.classList.add('active');
                             break;
                         }
                     }
