@@ -13,7 +13,7 @@ IMAGE_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.gif', '.bmp')
 ENABLE_THUMBNAIL = True                # 是否生成缩略图
 THUMB_SIZE = (120, 120)                # 缩略图尺寸
 THUMB_QUALITY = 70                      # WebP 质量
-THUMB_ROOT = os.path.join(PHOTO_ROOT, '__thumbs__')  # 缩略图存储目录
+THUMB_ROOT = os.path.join(PHOTO_ROOT, '__suolve__')  # 缩略图存储目录
 # ==============================
 
 # 尝试导入Pillow
@@ -26,15 +26,13 @@ except ImportError:
         print("⚠️ 未安装Pillow库，缩略图功能将禁用。请运行: pip install Pillow")
         ENABLE_THUMBNAIL = False
 
-def generate_thumbnail(src_path, thumb_path):
-    """生成 WebP 缩略图，文件名改为 .webp"""
+def generate_thumbnail(src_path, webp_path):
+    """生成 WebP 缩略图，直接保存到指定路径"""
     try:
-        base_name = os.path.splitext(os.path.basename(thumb_path))[0]
-        thumb_dir = os.path.dirname(thumb_path)
-        webp_path = os.path.join(thumb_dir, base_name + '.webp')
-        os.makedirs(thumb_dir, exist_ok=True)
+        os.makedirs(os.path.dirname(webp_path), exist_ok=True)
 
         with Image.open(src_path) as img:
+            # 处理透明背景
             if img.mode in ('RGBA', 'LA', 'P'):
                 bg = Image.new('RGB', img.size, (255, 255, 255))
                 if img.mode == 'P':
@@ -55,57 +53,88 @@ def generate_thumbnail(src_path, thumb_path):
                 img.save(webp_path, 'WEBP', quality=THUMB_QUALITY, method=6)
         return True
     except Exception as e:
-        print(f"  缩略图生成失败: {src_path} -> {e}")
+        print(f"   ✗ 缩略图生成失败: {src_path} -> {e}")
         return False
 
-def build_tree(current_path, rel_path=""):
-    """递归构建分类树（跳过 __thumbs__ 文件夹）"""
-    nodes = []
-    try:
-        items = os.listdir(current_path)
-    except PermissionError:
-        return nodes
+def collect_all_images(root_path):
+    """递归收集所有图片文件，返回列表 [(完整路径, 相对路径), ...]"""
+    images = []
+    for dirpath, dirnames, filenames in os.walk(root_path):
+        # 跳过 __thumbs__ 目录
+        dirnames[:] = [d for d in dirnames if d != '__suolve__']
+        for f in filenames:
+            if f.lower().endswith(IMAGE_EXTENSIONS):
+                full_path = os.path.join(dirpath, f)
+                rel_path = os.path.relpath(dirpath, root_path)
+                if rel_path == '.':
+                    rel_path = ''  # 根目录下的图片，相对路径为空
+                images.append((full_path, rel_path))
+    return images
 
-    for item in sorted(items):
-        if item == '__thumbs__' or item.startswith('.'):
-            continue
-        item_path = os.path.join(current_path, item)
-        if os.path.isdir(item_path):
-            child_rel = os.path.join(rel_path, item) if rel_path else item
-            children = build_tree(item_path, child_rel)
+def build_tree_from_images(images):
+    """根据收集到的图片列表构建分类树结构"""
+    tree = {}
+    for full_path, rel_path in images:
+        # 按相对路径拆分
+        parts = rel_path.split(os.sep) if rel_path else []
+        node = tree
+        for i, part in enumerate(parts):
+            if part not in node:
+                node[part] = {}
+            node = node[part]
+        # 最后存储图片文件名（不含路径）
+        if 'images' not in node:
+            node['images'] = []
+        node['images'].append(os.path.basename(full_path))
 
-            images = []
-            for file in os.listdir(item_path):
-                file_path = os.path.join(item_path, file)
-                if os.path.isfile(file_path) and file.lower().endswith(IMAGE_EXTENSIONS):
-                    if ENABLE_THUMBNAIL and HAS_PIL:
-                        thumb_rel_path = rel_path.replace('\\', '/')
-                        thumb_dir = os.path.join(THUMB_ROOT, *thumb_rel_path.split('/')) if thumb_rel_path else THUMB_ROOT
-                        thumb_path = os.path.join(thumb_dir, file)
-                        if not os.path.exists(thumb_path) or os.path.getmtime(file_path) > os.path.getmtime(thumb_path):
-                            generate_thumbnail(file_path, thumb_path)
-                    images.append(file)
+    # 将字典转换为列表格式
+    def convert_to_list(node_dict, current_path=''):
+        nodes = []
+        for name, sub in node_dict.items():
+            rel_path = os.path.join(current_path, name).replace('\\', '/') if current_path else name
+            children = convert_to_list(sub, rel_path) if isinstance(sub, dict) else []
+            images = sub.get('images', []) if isinstance(sub, dict) else []
             images.sort()
-
             node = {
-                "name": item,
-                "rel_path": child_rel.replace('\\', '/'),
+                "name": name,
+                "rel_path": rel_path,
                 "images": images,
                 "children": children
             }
             if images or children:
                 nodes.append(node)
-    return nodes
+        return nodes
 
-print("🔍 正在扫描目录并生成 WebP 缩略图（首次可能较慢）...")
-tree = build_tree(PHOTO_ROOT)
-if not tree:
-    print("❌ 未找到任何图片分类，请检查根目录下是否有包含图片的子文件夹。")
+    return convert_to_list(tree)
+
+print("🔍 正在扫描目录，收集所有图片...")
+all_images = collect_all_images(PHOTO_ROOT)
+if not all_images:
+    print("❌ 未找到任何图片文件。")
     exit()
 
+print(f"📸 找到 {len(all_images)} 张图片。")
+
+if ENABLE_THUMBNAIL and HAS_PIL:
+    print("🎨 开始生成 WebP 缩略图（首次可能较慢）...")
+    for idx, (full_path, rel_path) in enumerate(all_images, 1):
+        base_name = os.path.splitext(os.path.basename(full_path))[0]
+        webp_path = os.path.join(THUMB_ROOT, rel_path, base_name + '.webp')
+        # 检查是否需要生成缩略图
+        if not os.path.exists(webp_path) or os.path.getmtime(full_path) > os.path.getmtime(webp_path):
+            print(f"  [{idx}/{len(all_images)}] 生成: {webp_path}")
+            generate_thumbnail(full_path, webp_path)
+        else:
+            print(f"  [{idx}/{len(all_images)}] 已存在: {webp_path}")
+    print("✅ 缩略图处理完成。")
+else:
+    print("⚠️ 缩略图功能未启用或无Pillow库，将直接使用原图。")
+
+print("🏗️ 正在构建相册树结构...")
+tree = build_tree_from_images(all_images)
 tree_json = json.dumps(tree, ensure_ascii=False)
 
-# ==================== 生成HTML（完全显示全部图片，无滚动加载） ====================
+# ==================== 生成HTML ====================
 html = f"""<!DOCTYPE html>
 <html>
 <head>
@@ -414,7 +443,7 @@ with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
     f.write(html)
 
 print(f"✅ 相册生成成功！文件名为：{OUTPUT_FILE}")
-print(f"🖼️ 所有图片均使用 WebP 缩略图，无需原始图片。")
+print(f"🖼️ 缩略图目录结构与原照片完全一致，位于 {THUMB_ROOT}")
 print(f"📱 所有图片一次性显示完毕，无滚动加载。")
 print("🍰 已应用烘焙店风格配色，温馨舒适。")
 print("💡 提示：现在只需上传 index.html 和 __thumbs__ 文件夹即可，GitHub 仓库大小将远低于 50MB。")
