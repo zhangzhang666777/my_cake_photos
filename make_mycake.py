@@ -2,27 +2,26 @@ import os
 import json
 
 # ========== 配置部分 ==========
-PHOTO_ROOT = "D:/my_cake_photos"  # 照片根目录
-OUTPUT_FILE = "index.html"  # 输出的HTML文件名
-TITLE = "华味嘉蛋糕电子相册"  # 网页标题
+PHOTO_ROOT = "D:/my_cake_photos"      # 照片根目录
+OUTPUT_FILE = "index.html"            # 输出的HTML文件名
+TITLE = "华味嘉蛋糕电子相册"          # 网页标题
 
 # 支持的图片格式
 IMAGE_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.gif', '.bmp')
 
 # 缩略图配置
-ENABLE_THUMBNAIL = True  # 是否生成缩略图
-THUMB_SIZE = (200, 200)  # 缩略图尺寸
-THUMB_QUALITY = 70  # 缩略图质量 (1-100)，减小体积
+ENABLE_THUMBNAIL = True                # 是否生成缩略图
+THUMB_SIZE = (120, 120)                # 缩略图尺寸（手机端可更小）
+THUMB_QUALITY = 70                      # WebP 质量 (1-100)，70 平衡体积与画质
 THUMB_ROOT = os.path.join(PHOTO_ROOT, '__thumbs__')  # 缩略图存储目录
 
 # 分页配置
-PAGE_SIZE = 20  # 每页加载图片数量
+PAGE_SIZE = 10                          # 每页加载图片数量（移动端减少并发）
 # ==============================
 
 # 尝试导入Pillow
 try:
     from PIL import Image
-
     HAS_PIL = True
 except ImportError:
     HAS_PIL = False
@@ -30,12 +29,21 @@ except ImportError:
         print("⚠️ 未安装Pillow库，缩略图功能将禁用。请运行: pip install Pillow")
         ENABLE_THUMBNAIL = False
 
-
 def generate_thumbnail(src_path, thumb_path):
-    """生成缩略图，质量降低以减小体积"""
+    """
+    生成 WebP 缩略图。
+    thumb_path 是带原扩展名的路径（如 __thumbs__/a/b/c.jpg），
+    函数内部自动转换为同目录下的 .webp 文件名。
+    """
     try:
-        os.makedirs(os.path.dirname(thumb_path), exist_ok=True)
+        # 构造 WebP 路径：取目录 + 文件名（无扩展名） + .webp
+        base_name = os.path.splitext(os.path.basename(thumb_path))[0]
+        thumb_dir = os.path.dirname(thumb_path)
+        webp_path = os.path.join(thumb_dir, base_name + '.webp')
+        os.makedirs(thumb_dir, exist_ok=True)
+
         with Image.open(src_path) as img:
+            # 转换为RGB（处理PNG透明背景）
             if img.mode in ('RGBA', 'LA', 'P'):
                 bg = Image.new('RGB', img.size, (255, 255, 255))
                 if img.mode == 'P':
@@ -45,20 +53,23 @@ def generate_thumbnail(src_path, thumb_path):
             elif img.mode != 'RGB':
                 img = img.convert('RGB')
 
+            # 生成缩略图（保持比例）
             img.thumbnail(THUMB_SIZE, Image.Resampling.LANCZOS)
+
+            # 如果尺寸不足，创建白色画布并居中粘贴
             if img.size != THUMB_SIZE:
                 new_img = Image.new('RGB', THUMB_SIZE, (255, 255, 255))
                 offset = ((THUMB_SIZE[0] - img.size[0]) // 2,
                           (THUMB_SIZE[1] - img.size[1]) // 2)
                 new_img.paste(img, offset)
-                new_img.save(thumb_path, 'JPEG', quality=THUMB_QUALITY)
+                new_img.save(webp_path, 'WEBP', quality=THUMB_QUALITY, method=6)
             else:
-                img.save(thumb_path, 'JPEG', quality=THUMB_QUALITY)
+                img.save(webp_path, 'WEBP', quality=THUMB_QUALITY, method=6)
+
         return True
     except Exception as e:
         print(f"  缩略图生成失败: {src_path} -> {e}")
         return False
-
 
 def build_tree(current_path, rel_path=""):
     """递归构建分类树（跳过 __thumbs__ 文件夹）"""
@@ -76,14 +87,15 @@ def build_tree(current_path, rel_path=""):
             child_rel = os.path.join(rel_path, item) if rel_path else item
             children = build_tree(item_path, child_rel)
 
+            # 收集当前目录的图片
             images = []
             for file in os.listdir(item_path):
                 file_path = os.path.join(item_path, file)
                 if os.path.isfile(file_path) and file.lower().endswith(IMAGE_EXTENSIONS):
+                    # 生成缩略图
                     if ENABLE_THUMBNAIL and HAS_PIL:
                         thumb_rel_path = rel_path.replace('\\', '/')
-                        thumb_dir = os.path.join(THUMB_ROOT,
-                                                 *thumb_rel_path.split('/')) if thumb_rel_path else THUMB_ROOT
+                        thumb_dir = os.path.join(THUMB_ROOT, *thumb_rel_path.split('/')) if thumb_rel_path else THUMB_ROOT
                         thumb_path = os.path.join(thumb_dir, file)
                         if not os.path.exists(thumb_path) or os.path.getmtime(file_path) > os.path.getmtime(thumb_path):
                             generate_thumbnail(file_path, thumb_path)
@@ -100,8 +112,7 @@ def build_tree(current_path, rel_path=""):
                 nodes.append(node)
     return nodes
 
-
-print("🔍 正在扫描目录并生成缩略图（首次可能较慢）...")
+print("🔍 正在扫描目录并生成 WebP 缩略图（首次可能较慢）...")
 tree = build_tree(PHOTO_ROOT)
 if not tree:
     print("❌ 未找到任何图片分类，请检查根目录下是否有包含图片的子文件夹。")
@@ -120,6 +131,8 @@ html = f"""<!DOCTYPE html>
         * {{ box-sizing: border-box; margin: 0; padding: 0; }}
         body {{ font-family: 'Segoe UI', Roboto, Arial, sans-serif; background-color: #f4f7fb; }}
         #container {{ display: flex; min-height: 100vh; }}
+
+        /* 左侧导航 - 清爽风格，无箭头 */
         #sidebar {{
             width: 280px; background-color: #ffffff; color: #2c3e50; padding: 24px 16px;
             box-shadow: 2px 0 12px rgba(0,0,0,0.03); overflow-y: auto; height: 100vh;
@@ -141,6 +154,7 @@ html = f"""<!DOCTYPE html>
         .tree .folder-content {{ margin-left: 28px; display: block; }}
         .tree .folder-content.collapsed {{ display: none; }}
 
+        /* 右侧主内容区 */
         #main {{ flex: 1; padding: 24px; display: flex; flex-direction: column; }}
         #top-showcase {{ background: white; border-radius: 16px; padding: 20px; margin-bottom: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.02); border: 1px solid #edf2f7; }}
         #showcase-title {{ font-size: 1.1rem; font-weight: 600; color: #1e293b; margin-bottom: 16px; }}
@@ -154,10 +168,11 @@ html = f"""<!DOCTYPE html>
         #showcase-controls button:disabled {{ opacity: 0.4; cursor: not-allowed; }}
         #gallery {{ background: white; border-radius: 16px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.02); border: 1px solid #edf2f7; flex: 1; }}
         .gallery-grid {{ display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; }}
-        .gallery-grid img {{ width: 200px; height: 200px; object-fit: cover; border-radius: 12px; box-shadow: 0 6px 14px rgba(0,0,0,0.04); cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; background-color: #f8fafc; border: 1px solid #eef2f6; }}
-        .gallery-grid img:hover {{ transform: scale(1.02); box-shadow: 0 12px 24px rgba(0,0,0,0.08); }}
+        .gallery-grid img {{ width: 120px; height: 120px; object-fit: cover; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.04); cursor: pointer; transition: transform 0.15s; background-color: #f8fafc; border: 1px solid #eef2f6; }}
+        .gallery-grid img:hover {{ transform: scale(1.02); }}
         .no-images {{ text-align: center; color: #94a3b8; padding: 60px; font-size: 1rem; }}
 
+        /* 预览悬浮窗（带文件名，无后缀） */
         #preview-container {{
             display: none; position: fixed; bottom: 30px; right: 30px; background: white;
             border-radius: 16px; padding: 12px 12px 8px; box-shadow: 0 20px 30px rgba(0,0,0,0.2);
@@ -166,9 +181,14 @@ html = f"""<!DOCTYPE html>
         #preview-img {{ display: block; max-width: 100%; max-height: 65vh; object-fit: contain; border-radius: 8px; }}
         .preview-filename {{ margin-top: 8px; padding: 6px 12px; background: rgba(0,0,0,0.6); color: white; font-size: 0.9rem; border-radius: 30px; display: inline-block; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.2); }}
 
-        /* 加载更多指示器 */
+        /* 加载更多指示器及底部哨兵 */
         .loading-more {{
             text-align: center; padding: 20px; color: #94a3b8; width: 100%;
+        }}
+        #sentinel {{
+            height: 10px;
+            width: 100%;
+            visibility: hidden;
         }}
     </style>
 </head>
@@ -189,6 +209,7 @@ html = f"""<!DOCTYPE html>
             </div>
             <div id="gallery">
                 <div id="gallery-grid" class="gallery-grid"></div>
+                <div id="sentinel"></div> <!-- 用于触发加载的哨兵元素 -->
                 <div id="loading-more" class="loading-more" style="display: none;">加载中...</div>
             </div>
         </div>
@@ -202,7 +223,7 @@ html = f"""<!DOCTYPE html>
     <script>
         const treeData = {tree_json};
         const ENABLE_THUMBNAIL = {str(ENABLE_THUMBNAIL).lower()};
-        const PAGE_SIZE = {PAGE_SIZE};  // 从Python传递
+        const PAGE_SIZE = {PAGE_SIZE};  // 每页加载数量
 
         let currentNode = null;
         let currentImages = [];
@@ -214,6 +235,7 @@ html = f"""<!DOCTYPE html>
         const treeEl = document.getElementById('category-tree');
         const showcaseImagesEl = document.getElementById('showcase-images');
         const galleryGridEl = document.getElementById('gallery-grid');
+        const sentinelEl = document.getElementById('sentinel');
         const loadingMoreEl = document.getElementById('loading-more');
         const prevBtn = document.getElementById('prev-showcase');
         const nextBtn = document.getElementById('next-showcase');
@@ -226,7 +248,7 @@ html = f"""<!DOCTYPE html>
             return filename.replace(/\\.[^/.]+$/, '');
         }}
 
-        // 懒加载观察器（用于图片本身）
+        // 懒加载观察器
         const lazyObserver = new IntersectionObserver((entries) => {{
             entries.forEach(entry => {{
                 if (entry.isIntersecting) {{
@@ -244,17 +266,32 @@ html = f"""<!DOCTYPE html>
             document.querySelectorAll('#gallery-grid img[data-src]').forEach(img => lazyObserver.observe(img));
         }}
 
-        // 滚动到底部加载更多
-        function setupInfiniteScroll() {{
-            window.addEventListener('scroll', () => {{
-                if (isLoading || !hasMore) return;
-                const scrollY = window.scrollY;
-                const windowHeight = window.innerHeight;
-                const documentHeight = document.documentElement.scrollHeight;
-                if (scrollY + windowHeight >= documentHeight - 200) {{
-                    loadMoreImages();
-                }}
+        // ---------- 无限滚动 IntersectionObserver ----------
+        let sentinelObserver = null;
+
+        function initInfiniteScroll() {{
+            if (sentinelObserver) {{
+                sentinelObserver.disconnect();
+            }}
+            sentinelObserver = new IntersectionObserver((entries) => {{
+                entries.forEach(entry => {{
+                    if (entry.isIntersecting && !isLoading && hasMore) {{
+                        loadMoreImages();
+                    }}
+                }});
+            }}, {{
+                rootMargin: '100px', // 提前100px触发，提升流畅度
+                threshold: 0.01
             }});
+            sentinelObserver.observe(sentinelEl);
+        }}
+
+        // 销毁观察器（切换文件夹时重新绑定）
+        function resetInfiniteScroll() {{
+            if (sentinelObserver) {{
+                sentinelObserver.disconnect();
+            }}
+            initInfiniteScroll();
         }}
 
         function loadMoreImages() {{
@@ -282,15 +319,17 @@ html = f"""<!DOCTYPE html>
             const fullPath = `${{folder}}/${{imgName}}`;
             let thumbPath = fullPath;
             if (ENABLE_THUMBNAIL) {{
-                thumbPath = `__thumbs__/${{folder}}/${{imgName}}`;
+                const baseName = removeExtension(imgName);          // 无后缀文件名
+                thumbPath = `__thumbs__/${{folder}}/${{baseName}}.webp`; // WebP 缩略图路径
             }}
 
             const img = document.createElement('img');
             img.setAttribute('data-src', thumbPath);
             img.setAttribute('data-fullsrc', fullPath);
-            img.alt = removeExtension(imgName);
+            img.alt = removeExtension(imgName);  // 用于预览显示
 
             img.onerror = function() {{
+                // 如果缩略图加载失败（如不存在或格式不支持），尝试原图
                 if (this.src !== this.getAttribute('data-fullsrc')) {{
                     this.src = this.getAttribute('data-fullsrc');
                     this.onerror = null;
@@ -309,13 +348,15 @@ html = f"""<!DOCTYPE html>
             galleryGridEl.appendChild(img);
         }}
 
-        // 重置分页并重新加载网格
+        // 重置分页（切换文件夹时调用）
         function resetGallery() {{
             galleryGridEl.innerHTML = '';
             loadedCount = 0;
             hasMore = currentImages.length > 0;
             isLoading = false;
             loadingMoreEl.style.display = 'block';
+            // 重置哨兵观察器
+            resetInfiniteScroll();
             setTimeout(() => {{
                 const end = Math.min(PAGE_SIZE, currentImages.length);
                 for (let i = 0; i < end; i++) {{
@@ -328,7 +369,7 @@ html = f"""<!DOCTYPE html>
             }}, 10);
         }}
 
-        // 渲染树
+        // 渲染树（无箭头，双击文件夹折叠/展开）
         function renderTree(nodes, parentElement) {{
             nodes.forEach(node => {{
                 const li = document.createElement('li');
@@ -340,28 +381,17 @@ html = f"""<!DOCTYPE html>
                 const rowDiv = document.createElement('div');
                 rowDiv.className = 'node-row';
 
+                // 图标区域
                 const iconSpan = document.createElement('span');
                 iconSpan.className = 'icon';
                 if (hasChildren) {{
-                    iconSpan.innerHTML = '<i class="fas fa-chevron-right"></i>';
-                    iconSpan.addEventListener('click', (e) => {{
-                        e.stopPropagation();
-                        const content = li.querySelector('.folder-content');
-                        if (content) {{
-                            content.classList.toggle('collapsed');
-                            const i = iconSpan.querySelector('i');
-                            if (content.classList.contains('collapsed')) {{
-                                i.className = 'fas fa-chevron-right';
-                            }} else {{
-                                i.className = 'fas fa-chevron-down';
-                            }}
-                        }}
-                    }});
+                    iconSpan.innerHTML = '<i class="fas fa-folder"></i>';
                 }} else {{
-                    iconSpan.innerHTML = '<i class="fas fa-circle" style="font-size: 0.4rem; vertical-align: middle;"></i>';
+                    iconSpan.innerHTML = '<i class="fas fa-image"></i>';
                 }}
                 rowDiv.appendChild(iconSpan);
 
+                // 名称区域
                 const nameSpan = document.createElement('span');
                 nameSpan.className = 'name' + (hasImages ? ' clickable' : '');
                 nameSpan.textContent = node.name;
@@ -372,6 +402,7 @@ html = f"""<!DOCTYPE html>
                     nameSpan.appendChild(badge);
                 }}
 
+                // 单击名称切换图片（仅当有图片时）
                 if (hasImages) {{
                     nameSpan.addEventListener('click', (e) => {{
                         e.stopPropagation();
@@ -384,11 +415,23 @@ html = f"""<!DOCTYPE html>
                 rowDiv.appendChild(nameSpan);
                 li.appendChild(rowDiv);
 
+                // 子文件夹容器
                 if (hasChildren) {{
                     const childUl = document.createElement('ul');
                     childUl.className = 'folder-content';
                     li.appendChild(childUl);
                     renderTree(node.children, childUl);
+                }}
+
+                // 双击文件夹折叠/展开
+                if (hasChildren) {{
+                    li.addEventListener('dblclick', (e) => {{
+                        e.stopPropagation();
+                        const content = li.querySelector('.folder-content');
+                        if (content) {{
+                            content.classList.toggle('collapsed');
+                        }}
+                    }});
                 }}
 
                 parentElement.appendChild(li);
@@ -452,7 +495,7 @@ html = f"""<!DOCTYPE html>
         // 初始化
         window.onload = function() {{
             renderTree(treeData, treeEl);
-            setupInfiniteScroll();
+            initInfiniteScroll();  // 初始化哨兵观察器
 
             function findFirstWithImages(nodes) {{
                 for (let node of nodes) {{
@@ -488,5 +531,6 @@ with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
     f.write(html)
 
 print(f"✅ 相册生成成功！文件名为：{OUTPUT_FILE}")
-print(f"🖼️ 缩略图质量已调整为 {THUMB_QUALITY}，并启用分页加载（每页 {PAGE_SIZE} 张）。")
-print("📂 左侧导航已优化，自动隐藏 __thumbs__ 目录。")
+print(f"🖼️ 缩略图已转为 WebP 格式，质量 {THUMB_QUALITY}，尺寸 {THUMB_SIZE[0]}x{THUMB_SIZE[1]}")
+print(f"📄 每页加载 {PAGE_SIZE} 张图片，滚动时自动加载更多（基于 IntersectionObserver）。")
+print("📂 左侧导航自动隐藏 __thumbs__ 目录。")
