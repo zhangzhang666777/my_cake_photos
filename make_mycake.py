@@ -11,11 +11,9 @@ IMAGE_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.gif', '.bmp')
 
 # 缩略图配置
 ENABLE_THUMBNAIL = True                # 是否生成缩略图
-THUMB_SIZE = (120, 120)                # 缩略图尺寸（手机端可更小）
-THUMB_QUALITY = 70                      # WebP 质量 (1-100)，70 平衡体积与画质
+THUMB_SIZE = (120, 120)                # 缩略图尺寸
+THUMB_QUALITY = 70                      # WebP 质量
 THUMB_ROOT = os.path.join(PHOTO_ROOT, '__thumbs__')  # 缩略图存储目录
-
-# 分页配置已移除，改为前端动态适配
 # ==============================
 
 # 尝试导入Pillow
@@ -29,11 +27,7 @@ except ImportError:
         ENABLE_THUMBNAIL = False
 
 def generate_thumbnail(src_path, thumb_path):
-    """
-    生成 WebP 缩略图。
-    thumb_path 是带原扩展名的路径（如 __thumbs__/a/b/c.jpg），
-    函数内部自动转换为同目录下的 .webp 文件名。
-    """
+    """生成 WebP 缩略图，文件名改为 .webp"""
     try:
         base_name = os.path.splitext(os.path.basename(thumb_path))[0]
         thumb_dir = os.path.dirname(thumb_path)
@@ -111,7 +105,7 @@ if not tree:
 
 tree_json = json.dumps(tree, ensure_ascii=False)
 
-# ==================== 生成HTML ====================
+# ==================== 生成HTML（完全显示全部图片，无滚动加载） ====================
 html = f"""<!DOCTYPE html>
 <html>
 <head>
@@ -122,258 +116,53 @@ html = f"""<!DOCTYPE html>
         * {{ box-sizing: border-box; margin: 0; padding: 0; }}
         body {{
             font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-            background: #FEF5E7;  /* 奶油色背景 */
-            color: #5D3A1A;       /* 深巧克力色文字 */
+            background: #FEF5E7;
+            color: #5D3A1A;
         }}
         #container {{ display: flex; min-height: 100vh; }}
-
-        /* 左侧导航 - 温馨木色 */
         #sidebar {{
-            width: 280px;
-            background: #FFF9F0;          /* 暖米白 */
-            color: #5D3A1A;
-            padding: 24px 16px;
-            box-shadow: 2px 0 12px rgba(0,0,0,0.05);
-            overflow-y: auto;
-            height: 100vh;
-            position: sticky;
-            top: 0;
-            border-right: 1px solid #F0E4D0;
+            width: 280px; background: #FFF9F0; color: #5D3A1A; padding: 24px 16px;
+            box-shadow: 2px 0 12px rgba(0,0,0,0.05); overflow-y: auto; height: 100vh;
+            position: sticky; top: 0; border-right: 1px solid #F0E4D0;
         }}
-        #sidebar h2 {{
-            font-size: 1.3rem;
-            font-weight: 600;
-            margin-bottom: 24px;
-            color: #C28E5D;               /* 焦糖色 */
-            padding-bottom: 12px;
-            border-bottom: 2px solid #F0E4D0;
-        }}
+        #sidebar h2 {{ font-size: 1.3rem; font-weight: 600; margin-bottom: 24px; color: #C28E5D; padding-bottom: 12px; border-bottom: 2px solid #F0E4D0; }}
         .tree, .tree ul {{ list-style: none; margin: 0; padding-left: 0; }}
         .tree li {{ margin: 2px 0; line-height: 1.5; }}
-        .tree .node-row {{
-            display: flex;
-            align-items: center;
-            padding: 6px 8px;
-            border-radius: 8px;
-            transition: background-color 0.15s;
-            cursor: default;
-        }}
-        .tree .node-row:hover {{
-            background-color: #FDF3E6;     /* 淡奶油悬停 */
-        }}
-        .tree .icon {{
-            width: 28px;
-            text-align: left;
-            color: #C28E5D;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: color 0.15s;
-        }}
-        .tree .icon:hover {{
-            color: #E67E22;               /* 橙褐色 */
-        }}
-        .tree .name {{
-            flex: 1;
-            font-size: 0.95rem;
-            color: #5D3A1A;
-            padding: 2px 6px;
-            border-radius: 6px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }}
-        .tree .name.clickable {{
-            cursor: pointer;
-        }}
-        .tree .name.clickable:hover {{
-            background-color: #FAEBD7;
-        }}
-        .tree .name.active {{
-            background-color: #E67E22;     /* 暖橙色高亮 */
-            color: white;
-            font-weight: 500;
-        }}
-        .tree .badge {{
-            background-color: #F5E6D3;
-            color: #A55B2C;
-            font-size: 0.7rem;
-            font-weight: 500;
-            padding: 2px 8px;
-            border-radius: 30px;
-            margin-left: 8px;
-        }}
-        .tree .name.active .badge {{
-            background-color: rgba(255,255,255,0.25);
-            color: white;
-        }}
-        .tree .folder-content {{
-            margin-left: 28px;
-            display: block;
-        }}
-        .tree .folder-content.collapsed {{
-            display: none;
-        }}
-
-        /* 右侧主内容区 */
-        #main {{
-            flex: 1;
-            padding: 24px;
-            display: flex;
-            flex-direction: column;
-        }}
-        #top-showcase {{
-            background: white;
-            border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 24px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.04);
-            border: 1px solid #F5E6D3;
-        }}
-        #showcase-title {{
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #C28E5D;
-            margin-bottom: 16px;
-        }}
-        #showcase-images {{
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            gap: 20px;
-        }}
-        .showcase-item {{
-            text-align: center;
-            flex: 1;
-        }}
-        .showcase-item img {{
-            width: 100%;
-            max-width: 200px;
-            height: 150px;
-            object-fit: cover;
-            border-radius: 12px;
-            box-shadow: 0 6px 14px rgba(0,0,0,0.08);
-        }}
-        .showcase-item p {{
-            margin-top: 8px;
-            font-size: 0.85rem;
-            color: #7F4F24;
-        }}
-        #showcase-controls {{
-            display: flex;
-            justify-content: center;
-            margin-top: 16px;
-            gap: 12px;
-        }}
-        #showcase-controls button {{
-            background: white;
-            border: 1px solid #E6B17E;
-            color: #C28E5D;
-            padding: 8px 22px;
-            border-radius: 40px;
-            cursor: pointer;
-            font-size: 0.95rem;
-            font-weight: 500;
-            transition: all 0.15s;
-        }}
-        #showcase-controls button:hover {{
-            background: #FDF3E6;
-            border-color: #E67E22;
-            color: #E67E22;
-        }}
-        #showcase-controls button:disabled {{
-            opacity: 0.4;
-            cursor: not-allowed;
-        }}
-        #gallery {{
-            background: white;
-            border-radius: 16px;
-            padding: 24px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.04);
-            border: 1px solid #F5E6D3;
-            flex: 1;
-        }}
-        .gallery-grid {{
-            display: flex;
-            flex-wrap: wrap;
-            gap: 16px;
-            justify-content: center;
-        }}
-        .gallery-grid img {{
-            width: 120px;
-            height: 120px;
-            object-fit: cover;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.04);
-            cursor: pointer;
-            transition: transform 0.15s, box-shadow 0.15s;
-            background-color: #FDF3E6;
-            border: 1px solid #F0E4D0;
-        }}
-        .gallery-grid img:hover {{
-            transform: scale(1.02);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-        }}
-        .no-images {{
-            text-align: center;
-            color: #C28E5D;
-            padding: 60px;
-            font-size: 1rem;
-        }}
-
-        /* 预览悬浮窗 */
+        .tree .node-row {{ display: flex; align-items: center; padding: 6px 8px; border-radius: 8px; transition: background-color 0.15s; cursor: default; }}
+        .tree .node-row:hover {{ background-color: #FDF3E6; }}
+        .tree .icon {{ width: 28px; text-align: left; color: #C28E5D; font-size: 1rem; cursor: pointer; transition: color 0.15s; }}
+        .tree .icon:hover {{ color: #E67E22; }}
+        .tree .name {{ flex: 1; font-size: 0.95rem; color: #5D3A1A; padding: 2px 6px; border-radius: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; justify-content: space-between; }}
+        .tree .name.clickable {{ cursor: pointer; }}
+        .tree .name.clickable:hover {{ background-color: #FAEBD7; }}
+        .tree .name.active {{ background-color: #E67E22; color: white; font-weight: 500; }}
+        .tree .badge {{ background-color: #F5E6D3; color: #A55B2C; font-size: 0.7rem; font-weight: 500; padding: 2px 8px; border-radius: 30px; margin-left: 8px; }}
+        .tree .name.active .badge {{ background-color: rgba(255,255,255,0.25); color: white; }}
+        .tree .folder-content {{ margin-left: 28px; display: block; }}
+        .tree .folder-content.collapsed {{ display: none; }}
+        #main {{ flex: 1; padding: 24px; display: flex; flex-direction: column; }}
+        #top-showcase {{ background: white; border-radius: 16px; padding: 20px; margin-bottom: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.04); border: 1px solid #F5E6D3; }}
+        #showcase-title {{ font-size: 1.1rem; font-weight: 600; color: #C28E5D; margin-bottom: 16px; }}
+        #showcase-images {{ display: flex; justify-content: space-around; align-items: center; gap: 20px; }}
+        .showcase-item {{ text-align: center; flex: 1; }}
+        .showcase-item img {{ width: 100%; max-width: 200px; height: 150px; object-fit: cover; border-radius: 12px; box-shadow: 0 6px 14px rgba(0,0,0,0.08); }}
+        .showcase-item p {{ margin-top: 8px; font-size: 0.85rem; color: #7F4F24; }}
+        #showcase-controls {{ display: flex; justify-content: center; margin-top: 16px; gap: 12px; }}
+        #showcase-controls button {{ background: white; border: 1px solid #E6B17E; color: #C28E5D; padding: 8px 22px; border-radius: 40px; cursor: pointer; font-size: 0.95rem; font-weight: 500; transition: all 0.15s; }}
+        #showcase-controls button:hover {{ background: #FDF3E6; border-color: #E67E22; color: #E67E22; }}
+        #showcase-controls button:disabled {{ opacity: 0.4; cursor: not-allowed; }}
+        #gallery {{ background: white; border-radius: 16px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.04); border: 1px solid #F5E6D3; flex: 1; }}
+        .gallery-grid {{ display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; }}
+        .gallery-grid img {{ width: 120px; height: 120px; object-fit: cover; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.04); cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; background-color: #FDF3E6; border: 1px solid #F0E4D0; }}
+        .gallery-grid img:hover {{ transform: scale(1.02); box-shadow: 0 8px 16px rgba(0,0,0,0.1); }}
+        .no-images {{ text-align: center; color: #C28E5D; padding: 60px; font-size: 1rem; }}
         #preview-container {{
-            display: none;
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            background: #FFFCF8;
-            border-radius: 16px;
-            padding: 12px 12px 8px;
-            box-shadow: 0 20px 30px rgba(0,0,0,0.15);
-            border: 1px solid #F0E4D0;
-            z-index: 1000;
-            max-width: 80vw;
-            max-height: 80vh;
-            text-align: center;
+            display: none; position: fixed; bottom: 30px; right: 30px; background: #FFFCF8;
+            border-radius: 16px; padding: 12px 12px 8px; box-shadow: 0 20px 30px rgba(0,0,0,0.15);
+            border: 1px solid #F0E4D0; z-index: 1000; max-width: 80vw; max-height: 80vh; text-align: center;
         }}
-        #preview-img {{
-            display: block;
-            max-width: 100%;
-            max-height: 65vh;
-            object-fit: contain;
-            border-radius: 8px;
-        }}
-        .preview-filename {{
-            margin-top: 8px;
-            padding: 6px 12px;
-            background: rgba(0,0,0,0.6);
-            color: #FEF5E7;
-            font-size: 0.9rem;
-            border-radius: 30px;
-            display: inline-block;
-            max-width: 100%;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            backdrop-filter: blur(4px);
-            border: 1px solid rgba(255,255,255,0.2);
-        }}
-
-        /* 加载更多指示器 */
-        .loading-more {{
-            text-align: center;
-            padding: 20px;
-            color: #B97F45;
-            width: 100%;
-        }}
-        #sentinel {{
-            height: 10px;
-            width: 100%;
-            visibility: hidden;
-        }}
+        #preview-img {{ display: block; max-width: 100%; max-height: 65vh; object-fit: contain; border-radius: 8px; }}
+        .preview-filename {{ margin-top: 8px; padding: 6px 12px; background: rgba(0,0,0,0.6); color: #FEF5E7; font-size: 0.9rem; border-radius: 30px; display: inline-block; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.2); }}
     </style>
 </head>
 <body>
@@ -393,8 +182,6 @@ html = f"""<!DOCTYPE html>
             </div>
             <div id="gallery">
                 <div id="gallery-grid" class="gallery-grid"></div>
-                <div id="sentinel"></div>
-                <div id="loading-more" class="loading-more" style="display: none;">加载中...</div>
             </div>
         </div>
     </div>
@@ -406,145 +193,61 @@ html = f"""<!DOCTYPE html>
 
     <script>
         const treeData = {tree_json};
-        const ENABLE_THUMBNAIL = {str(ENABLE_THUMBNAIL).lower()};
-        // 移除固定 PAGE_SIZE，改为动态获取
-
+        // 使用缩略图，一次性全部加载
         let currentNode = null;
         let currentImages = [];
         let showcaseStartIndex = 0;
-        let loadedCount = 0;
-        let isLoading = false;
-        let hasMore = true;
 
         const treeEl = document.getElementById('category-tree');
         const showcaseImagesEl = document.getElementById('showcase-images');
         const galleryGridEl = document.getElementById('gallery-grid');
-        const sentinelEl = document.getElementById('sentinel');
-        const loadingMoreEl = document.getElementById('loading-more');
         const prevBtn = document.getElementById('prev-showcase');
         const nextBtn = document.getElementById('next-showcase');
         const previewContainer = document.getElementById('preview-container');
         const previewImg = document.getElementById('preview-img');
         const previewFilename = document.getElementById('preview-filename');
 
-        // 根据屏幕宽度返回合适的每页图片数量
-        function getPageSize() {{
-            const width = window.innerWidth;
-            if (width <= 768) return 6;      // 手机
-            if (width <= 1024) return 10;    // 平板
-            return 15;                       // 桌面
-        }}
-
         function removeExtension(filename) {{
             return filename.replace(/\\.[^/.]+$/, '');
         }}
 
-        const lazyObserver = new IntersectionObserver((entries) => {{
-            entries.forEach(entry => {{
-                if (entry.isIntersecting) {{
-                    const img = entry.target;
-                    const dataSrc = img.getAttribute('data-src');
-                    if (dataSrc && !img.src) {{
-                        img.src = dataSrc;
-                        img.removeAttribute('data-src');
-                    }}
-                }}
-            }});
-        }}, {{ rootMargin: '100px', threshold: 0.01 }});
-
-        function observeLazyImages() {{
-            document.querySelectorAll('#gallery-grid img[data-src]').forEach(img => lazyObserver.observe(img));
+        // 构建缩略图路径（WebP）
+        function getThumbPath(folder, imgName) {{
+            const baseName = removeExtension(imgName);
+            return `__thumbs__/${{folder}}/${{baseName}}.webp`;
         }}
 
-        let sentinelObserver = null;
-        function initInfiniteScroll() {{
-            if (sentinelObserver) sentinelObserver.disconnect();
-            sentinelObserver = new IntersectionObserver((entries) => {{
-                entries.forEach(entry => {{
-                    if (entry.isIntersecting && !isLoading && hasMore) {{
-                        loadMoreImages();
-                    }}
-                }});
-            }}, {{ rootMargin: '100px', threshold: 0.01 }});
-            sentinelObserver.observe(sentinelEl);
-        }}
-
-        function resetInfiniteScroll() {{
-            if (sentinelObserver) sentinelObserver.disconnect();
-            initInfiniteScroll();
-        }}
-
-        function loadMoreImages() {{
-            if (isLoading || !hasMore || !currentImages) return;
-            isLoading = true;
-            loadingMoreEl.style.display = 'block';
-
-            setTimeout(() => {{
-                const start = loadedCount;
-                const pageSize = getPageSize();  // 每次加载前重新获取页大小
-                const end = Math.min(loadedCount + pageSize, currentImages.length);
-                for (let i = start; i < end; i++) {{
-                    addImageToGrid(currentImages[i]);
-                }}
-                loadedCount = end;
-                hasMore = loadedCount < currentImages.length;
-                isLoading = false;
-                loadingMoreEl.style.display = hasMore ? 'block' : 'none';
-                observeLazyImages();
-            }}, 10);
-        }}
-
-        function addImageToGrid(imgName) {{
-            const folder = currentNode.rel_path;
-            const fullPath = `${{folder}}/${{imgName}}`;
-            let thumbPath = fullPath;
-            if (ENABLE_THUMBNAIL) {{
-                const baseName = removeExtension(imgName);
-                thumbPath = `__thumbs__/${{folder}}/${{baseName}}.webp`;
-            }}
-
-            const img = document.createElement('img');
-            img.setAttribute('data-src', thumbPath);
-            img.setAttribute('data-fullsrc', fullPath);
-            img.alt = removeExtension(imgName);
-
-            img.onerror = function() {{
-                if (this.src !== this.getAttribute('data-fullsrc')) {{
-                    this.src = this.getAttribute('data-fullsrc');
-                    this.onerror = null;
-                }}
-            }};
-
-            img.addEventListener('mouseenter', () => {{
-                previewImg.src = fullPath;
-                previewFilename.textContent = removeExtension(imgName);
-                previewContainer.style.display = 'block';
-            }});
-            img.addEventListener('mouseleave', () => {{
-                previewContainer.style.display = 'none';
-            }});
-
-            galleryGridEl.appendChild(img);
-        }}
-
-        function resetGallery() {{
+        // 一次性渲染所有图片
+        function renderAllImages() {{
             galleryGridEl.innerHTML = '';
-            loadedCount = 0;
-            hasMore = currentImages.length > 0;
-            isLoading = false;
-            loadingMoreEl.style.display = 'block';
-            resetInfiniteScroll();
-            setTimeout(() => {{
-                const pageSize = getPageSize();  // 首次加载也根据当前窗口
-                const end = Math.min(pageSize, currentImages.length);
-                for (let i = 0; i < end; i++) {{
-                    addImageToGrid(currentImages[i]);
-                }}
-                loadedCount = end;
-                hasMore = loadedCount < currentImages.length;
-                loadingMoreEl.style.display = hasMore ? 'block' : 'none';
-                observeLazyImages();
-            }}, 10);
+            if (!currentImages || currentImages.length === 0) {{
+                const noImgDiv = document.createElement('div');
+                noImgDiv.className = 'no-images';
+                noImgDiv.textContent = '暂无图片';
+                galleryGridEl.appendChild(noImgDiv);
+                return;
+            }}
+            const folder = currentNode.rel_path;
+            for (let imgName of currentImages) {{
+                const thumbPath = getThumbPath(folder, imgName);
+                const displayName = removeExtension(imgName);
+
+                const img = document.createElement('img');
+                img.src = thumbPath;
+                img.alt = displayName;
+
+                // 鼠标悬停预览
+                img.addEventListener('mouseenter', () => {{
+                    previewImg.src = thumbPath;
+                    previewFilename.textContent = displayName;
+                    previewContainer.style.display = 'block';
+                }});
+                img.addEventListener('mouseleave', () => {{
+                    previewContainer.style.display = 'none';
+                }});
+
+                galleryGridEl.appendChild(img);
+            }}
         }}
 
         function renderTree(nodes, parentElement) {{
@@ -615,7 +318,7 @@ html = f"""<!DOCTYPE html>
             currentImages = node.images || [];
             showcaseStartIndex = 0;
             updateShowcase();
-            resetGallery();
+            renderAllImages();
         }}
 
         function updateShowcase() {{
@@ -638,11 +341,12 @@ html = f"""<!DOCTYPE html>
 
             indices.forEach(idx => {{
                 const imgName = images[idx];
-                const imgPath = `${{currentNode.rel_path}}/${{imgName}}`;
+                const folder = currentNode.rel_path;
+                const thumbPath = getThumbPath(folder, imgName);
                 const displayName = removeExtension(imgName);
                 const div = document.createElement('div');
                 div.className = 'showcase-item';
-                div.innerHTML = `<img src="${{imgPath}}" alt="${{displayName}}" loading="lazy" onerror="this.src='${{imgPath}}'; this.onerror=null;"><p>${{displayName}}</p>`;
+                div.innerHTML = `<img src="${{thumbPath}}" alt="${{displayName}}" loading="lazy"><p>${{displayName}}</p>`;
                 showcaseImagesEl.appendChild(div);
             }});
 
@@ -666,7 +370,6 @@ html = f"""<!DOCTYPE html>
 
         window.onload = function() {{
             renderTree(treeData, treeEl);
-            initInfiniteScroll();
 
             function findFirstWithImages(nodes) {{
                 for (let node of nodes) {{
@@ -702,6 +405,7 @@ with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
     f.write(html)
 
 print(f"✅ 相册生成成功！文件名为：{OUTPUT_FILE}")
-print(f"🖼️ 缩略图已转为 WebP 格式，质量 {THUMB_QUALITY}，尺寸 {THUMB_SIZE[0]}x{THUMB_SIZE[1]}")
-print("📱 每页加载图片数量已根据屏幕分辨率自动适配（手机6张，平板10张，桌面15张）")
+print(f"🖼️ 所有图片均使用 WebP 缩略图，无需原始图片。")
+print(f"📱 所有图片一次性显示完毕，无滚动加载。")
 print("🍰 已应用烘焙店风格配色，温馨舒适。")
+print("💡 提示：现在只需上传 index.html 和 __thumbs__ 文件夹即可，GitHub 仓库大小将远低于 50MB。")
