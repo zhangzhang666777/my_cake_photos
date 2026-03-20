@@ -153,16 +153,38 @@ html = f"""<!DOCTYPE html>
         #showcase-controls button:disabled {{ opacity: 0.4; cursor: not-allowed; }}
         #gallery {{ background: white; border-radius: 16px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.04); border: 1px solid #F5E6D3; flex: 1; }}
         .gallery-grid {{ display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; }}
-        .gallery-grid img {{ width: 120px; height: 120px; object-fit: cover; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.04); cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; background-color: #FDF3E6; border: 1px solid #F0E4D0; }}
-        .gallery-grid img:hover {{ transform: scale(1.02); box-shadow: 0 8px 16px rgba(0,0,0,0.1); }}
-        .no-images {{ text-align: center; color: #C28E5D; padding: 60px; font-size: 1rem; }}
-        #preview-container {{
-            display: none; position: fixed; bottom: 30px; right: 30px; background: #FFFCF8;
-            border-radius: 16px; padding: 12px 12px 8px; box-shadow: 0 20px 30px rgba(0,0,0,0.15);
-            border: 1px solid #F0E4D0; z-index: 1000; max-width: 80vw; max-height: 80vh; text-align: center;
+        .gallery-item {{
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 120px;
+            margin: 0 8px 16px 8px;
         }}
-        #preview-img {{ display: block; max-width: 100%; max-height: 65vh; object-fit: contain; border-radius: 8px; }}
-        .preview-filename {{ margin-top: 8px; padding: 6px 12px; background: rgba(0,0,0,0.6); color: #FEF5E7; font-size: 0.9rem; border-radius: 30px; display: inline-block; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.2); }}
+        .gallery-item img {{
+            width: 120px;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.04);
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+            border: 1px solid #F0E4D0;
+        }}
+        .gallery-item img:hover {{
+            transform: scale(1.02);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }}
+        .gallery-item span {{
+            margin-top: 8px;
+            font-size: 0.8rem;
+            color: #7F4F24;
+            text-align: center;
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }}
+        .no-images {{ text-align: center; color: #C28E5D; padding: 60px; font-size: 1rem; }}
     </style>
 </head>
 <body>
@@ -186,14 +208,8 @@ html = f"""<!DOCTYPE html>
         </div>
     </div>
 
-    <div id="preview-container">
-        <img id="preview-img" src="" alt="预览">
-        <div id="preview-filename" class="preview-filename"></div>
-    </div>
-
     <script>
         const treeData = {tree_json};
-        // 使用缩略图，一次性全部加载
         let currentNode = null;
         let currentImages = [];
         let showcaseStartIndex = 0;
@@ -203,21 +219,16 @@ html = f"""<!DOCTYPE html>
         const galleryGridEl = document.getElementById('gallery-grid');
         const prevBtn = document.getElementById('prev-showcase');
         const nextBtn = document.getElementById('next-showcase');
-        const previewContainer = document.getElementById('preview-container');
-        const previewImg = document.getElementById('preview-img');
-        const previewFilename = document.getElementById('preview-filename');
 
         function removeExtension(filename) {{
             return filename.replace(/\\.[^/.]+$/, '');
         }}
 
-        // 构建缩略图路径（WebP）
         function getThumbPath(folder, imgName) {{
             const baseName = removeExtension(imgName);
             return `__thumbs__/${{folder}}/${{baseName}}.webp`;
         }}
 
-        // 一次性渲染所有图片
         function renderAllImages() {{
             galleryGridEl.innerHTML = '';
             if (!currentImages || currentImages.length === 0) {{
@@ -232,21 +243,19 @@ html = f"""<!DOCTYPE html>
                 const thumbPath = getThumbPath(folder, imgName);
                 const displayName = removeExtension(imgName);
 
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'gallery-item';
+
                 const img = document.createElement('img');
                 img.src = thumbPath;
                 img.alt = displayName;
 
-                // 鼠标悬停预览
-                img.addEventListener('mouseenter', () => {{
-                    previewImg.src = thumbPath;
-                    previewFilename.textContent = displayName;
-                    previewContainer.style.display = 'block';
-                }});
-                img.addEventListener('mouseleave', () => {{
-                    previewContainer.style.display = 'none';
-                }});
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = displayName;
 
-                galleryGridEl.appendChild(img);
+                itemDiv.appendChild(img);
+                itemDiv.appendChild(nameSpan);
+                galleryGridEl.appendChild(itemDiv);
             }}
         }}
 
