@@ -11,13 +11,25 @@ IMAGE_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.gif', '.bmp')
 
 # 缩略图配置
 ENABLE_THUMBNAIL = True                # 是否生成缩略图
-THUMB_SIZE = (120, 120)                # 缩略图尺寸（手机端可更小）
-THUMB_QUALITY = 70                      # WebP 质量 (1-100)，70 平衡体积与画质
+THUMB_SIZE = (120, 120)                # 缩略图尺寸
+THUMB_QUALITY = 70                      # WebP 质量
 THUMB_ROOT = os.path.join(PHOTO_ROOT, '__thumbs__')  # 缩略图存储目录
 
 # 分页配置
-PAGE_SIZE = 10                          # 每页加载图片数量（移动端减少并发）
+PAGE_SIZE = 10                          # 每页加载图片数量
+
+# CDN加速配置（使用 jsDelivr）
+ENABLE_CDN = True                       # 是否启用CDN
+GITHUB_USER = "zhangzhang666777"           # GitHub用户名，请修改为实际值
+GITHUB_REPO = "my_cake_photos"          # 仓库名，请修改为实际值
+GITHUB_BRANCH = "main"                  # 分支名，通常为 main 或 master
 # ==============================
+
+# 如果启用CDN，构建基础URL
+if ENABLE_CDN:
+    CDN_BASE = f"https://cdn.jsdelivr.net/gh/{GITHUB_USER}/{GITHUB_REPO}@{GITHUB_BRANCH}/"
+else:
+    CDN_BASE = ""
 
 # 尝试导入Pillow
 try:
@@ -36,14 +48,12 @@ def generate_thumbnail(src_path, thumb_path):
     函数内部自动转换为同目录下的 .webp 文件名。
     """
     try:
-        # 构造 WebP 路径：取目录 + 文件名（无扩展名） + .webp
         base_name = os.path.splitext(os.path.basename(thumb_path))[0]
         thumb_dir = os.path.dirname(thumb_path)
         webp_path = os.path.join(thumb_dir, base_name + '.webp')
         os.makedirs(thumb_dir, exist_ok=True)
 
         with Image.open(src_path) as img:
-            # 转换为RGB（处理PNG透明背景）
             if img.mode in ('RGBA', 'LA', 'P'):
                 bg = Image.new('RGB', img.size, (255, 255, 255))
                 if img.mode == 'P':
@@ -53,10 +63,8 @@ def generate_thumbnail(src_path, thumb_path):
             elif img.mode != 'RGB':
                 img = img.convert('RGB')
 
-            # 生成缩略图（保持比例）
             img.thumbnail(THUMB_SIZE, Image.Resampling.LANCZOS)
 
-            # 如果尺寸不足，创建白色画布并居中粘贴
             if img.size != THUMB_SIZE:
                 new_img = Image.new('RGB', THUMB_SIZE, (255, 255, 255))
                 offset = ((THUMB_SIZE[0] - img.size[0]) // 2,
@@ -87,12 +95,10 @@ def build_tree(current_path, rel_path=""):
             child_rel = os.path.join(rel_path, item) if rel_path else item
             children = build_tree(item_path, child_rel)
 
-            # 收集当前目录的图片
             images = []
             for file in os.listdir(item_path):
                 file_path = os.path.join(item_path, file)
                 if os.path.isfile(file_path) and file.lower().endswith(IMAGE_EXTENSIONS):
-                    # 生成缩略图
                     if ENABLE_THUMBNAIL and HAS_PIL:
                         thumb_rel_path = rel_path.replace('\\', '/')
                         thumb_dir = os.path.join(THUMB_ROOT, *thumb_rel_path.split('/')) if thumb_rel_path else THUMB_ROOT
@@ -417,6 +423,7 @@ html = f"""<!DOCTYPE html>
         const treeData = {tree_json};
         const ENABLE_THUMBNAIL = {str(ENABLE_THUMBNAIL).lower()};
         const PAGE_SIZE = {PAGE_SIZE};
+        const CDN_BASE = "{CDN_BASE}";  // CDN前缀，可能为空
 
         let currentNode = null;
         let currentImages = [];
@@ -438,6 +445,14 @@ html = f"""<!DOCTYPE html>
 
         function removeExtension(filename) {{
             return filename.replace(/\\.[^/.]+$/, '');
+        }}
+
+        // 拼接CDN路径
+        function getCDNUrl(relativePath) {{
+            if (CDN_BASE && relativePath) {{
+                return CDN_BASE + relativePath;
+            }}
+            return relativePath;
         }}
 
         const lazyObserver = new IntersectionObserver((entries) => {{
@@ -502,10 +517,13 @@ html = f"""<!DOCTYPE html>
                 const baseName = removeExtension(imgName);
                 thumbPath = `__thumbs__/${{folder}}/${{baseName}}.webp`;
             }}
+            // 使用CDN前缀
+            const cdnFullPath = getCDNUrl(fullPath);
+            const cdnThumbPath = getCDNUrl(thumbPath);
 
             const img = document.createElement('img');
-            img.setAttribute('data-src', thumbPath);
-            img.setAttribute('data-fullsrc', fullPath);
+            img.setAttribute('data-src', cdnThumbPath);
+            img.setAttribute('data-fullsrc', cdnFullPath);
             img.alt = removeExtension(imgName);
 
             img.onerror = function() {{
@@ -516,7 +534,7 @@ html = f"""<!DOCTYPE html>
             }};
 
             img.addEventListener('mouseenter', () => {{
-                previewImg.src = fullPath;
+                previewImg.src = cdnFullPath;
                 previewFilename.textContent = removeExtension(imgName);
                 previewContainer.style.display = 'block';
             }});
@@ -639,9 +657,10 @@ html = f"""<!DOCTYPE html>
                 const imgName = images[idx];
                 const imgPath = `${{currentNode.rel_path}}/${{imgName}}`;
                 const displayName = removeExtension(imgName);
+                const cdnPath = getCDNUrl(imgPath);
                 const div = document.createElement('div');
                 div.className = 'showcase-item';
-                div.innerHTML = `<img src="${{imgPath}}" alt="${{displayName}}" loading="lazy" onerror="this.src='${{imgPath}}'; this.onerror=null;"><p>${{displayName}}</p>`;
+                div.innerHTML = `<img src="${{cdnPath}}" alt="${{displayName}}" loading="lazy" onerror="this.src='${{cdnPath}}'; this.onerror=null;"><p>${{displayName}}</p>`;
                 showcaseImagesEl.appendChild(div);
             }});
 
@@ -701,6 +720,10 @@ with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
     f.write(html)
 
 print(f"✅ 相册生成成功！文件名为：{OUTPUT_FILE}")
+if ENABLE_CDN:
+    print(f"🚀 已启用 jsDelivr CDN 加速，CDN 地址：{CDN_BASE}")
+else:
+    print("ℹ️ CDN加速未启用，图片将使用相对路径。")
 print(f"🖼️ 缩略图已转为 WebP 格式，质量 {THUMB_QUALITY}，尺寸 {THUMB_SIZE[0]}x{THUMB_SIZE[1]}")
 print(f"📄 每页加载 {PAGE_SIZE} 张图片，滚动时自动加载更多。")
 print("🍰 已应用烘焙店风格配色，温馨舒适。")
