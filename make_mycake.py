@@ -255,7 +255,7 @@ html = f"""<!DOCTYPE html>
 
         function getThumbPath(folder, imgName) {{
             const baseName = removeExtension(imgName);
-            return `__thumbs__/${{folder}}/${{baseName}}.webp`;
+            return `__suolve__/${{folder}}/${{baseName}}.webp`;
         }}
 
         function renderAllImages() {{
