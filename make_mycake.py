@@ -1,5 +1,6 @@
 import os
 import json
+import re
 
 # ========== 配置部分 ==========
 PHOTO_ROOT = "D:/my_cake_photos"      # 照片根目录
@@ -25,6 +26,16 @@ except ImportError:
     if ENABLE_THUMBNAIL:
         print("⚠️ 未安装Pillow库，缩略图功能将禁用。请运行: pip install Pillow")
         ENABLE_THUMBNAIL = False
+
+def safe_filename(filename):
+    """
+    将文件名中的空格替换为下划线，并保留中文等字符。
+    返回安全的基本名（不含扩展名）。
+    """
+    base = os.path.splitext(filename)[0]
+    # 将空格替换为下划线
+    safe_base = base.replace(' ', '_')
+    return safe_base
 
 def generate_thumbnail(src_path, webp_path):
     """生成 WebP 缩略图，直接保存到指定路径"""
@@ -57,7 +68,7 @@ def generate_thumbnail(src_path, webp_path):
         return False
 
 def collect_all_images(root_path):
-    """递归收集所有图片文件，返回列表 [(完整路径, 相对路径), ...]"""
+    """递归收集所有图片文件，返回列表 [(完整路径, 相对路径, 原始文件名, 安全基本名), ...]"""
     images = []
     for dirpath, dirnames, filenames in os.walk(root_path):
         # 跳过缩略图目录
@@ -65,27 +76,31 @@ def collect_all_images(root_path):
         for f in filenames:
             if f.lower().endswith(IMAGE_EXTENSIONS):
                 full_path = os.path.join(dirpath, f)
-                rel_path = os.path.relpath(dirpath, root_path)
-                if rel_path == '.':
-                    rel_path = ''  # 根目录下的图片，相对路径为空
-                images.append((full_path, rel_path))
+                rel_dir = os.path.relpath(dirpath, root_path)
+                if rel_dir == '.':
+                    rel_dir = ''  # 根目录下的图片，相对路径为空
+                safe_base = safe_filename(f)
+                images.append((full_path, rel_dir, f, safe_base))
     return images
 
 def build_tree_from_images(images):
     """根据收集到的图片列表构建分类树结构"""
     tree = {}
-    for full_path, rel_path in images:
+    for full_path, rel_path, orig_name, safe_base in images:
         # 按相对路径拆分
         parts = rel_path.split(os.sep) if rel_path else []
         node = tree
-        for i, part in enumerate(parts):
+        for part in parts:
             if part not in node:
                 node[part] = {}
             node = node[part]
-        # 最后存储图片文件名（不含路径）
+        # 存储图片信息：原始文件名（用于显示）和安全基本名（用于缩略图）
         if 'images' not in node:
             node['images'] = []
-        node['images'].append(os.path.basename(full_path))
+        node['images'].append({
+            'orig': orig_name,
+            'safe': safe_base
+        })
 
     # 将字典转换为列表格式
     def convert_to_list(node_dict, current_path=''):
@@ -94,11 +109,10 @@ def build_tree_from_images(images):
             rel_path = os.path.join(current_path, name).replace('\\', '/') if current_path else name
             children = convert_to_list(sub, rel_path) if isinstance(sub, dict) else []
             images = sub.get('images', []) if isinstance(sub, dict) else []
-            images.sort()
             node = {
                 "name": name,
                 "rel_path": rel_path,
-                "images": images,
+                "images": images,        # 现在 images 是列表，每项包含 orig 和 safe
                 "children": children
             }
             if images or children:
@@ -117,9 +131,9 @@ print(f"📸 找到 {len(all_images)} 张图片。")
 
 if ENABLE_THUMBNAIL and HAS_PIL:
     print("🎨 开始生成 WebP 缩略图（首次可能较慢）...")
-    for idx, (full_path, rel_path) in enumerate(all_images, 1):
-        base_name = os.path.splitext(os.path.basename(full_path))[0]
-        webp_path = os.path.join(THUMB_ROOT, rel_path, base_name + '.webp')
+    for idx, (full_path, rel_path, orig_name, safe_base) in enumerate(all_images, 1):
+        # 缩略图文件名：安全基本名.webp
+        webp_path = os.path.join(THUMB_ROOT, rel_path, safe_base + '.webp')
         # 检查是否需要生成缩略图
         if not os.path.exists(webp_path) or os.path.getmtime(full_path) > os.path.getmtime(webp_path):
             print(f"  [{idx}/{len(all_images)}] 生成: {webp_path}")
@@ -135,14 +149,14 @@ tree = build_tree_from_images(all_images)
 tree_json = json.dumps(tree, ensure_ascii=False)
 
 # ==================== 生成HTML ====================
-# 缩略图文件夹名（用于前端）
 THUMB_FOLDER_NAME = os.path.basename(THUMB_ROOT)
 
-html = f"""<!DOCTYPE html>
+# 使用普通字符串，避免 f-string 解析花括号
+html = """<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>{TITLE}</title>
+    <title>{2}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * {{ box-sizing: border-box; margin: 0; padding: 0; }}
@@ -241,9 +255,9 @@ html = f"""<!DOCTYPE html>
     </div>
 
     <script>
-        const treeData = {tree_json};
+        const treeData = {0};
         let currentNode = null;
-        let currentImages = [];
+        let currentImages = [];   // 存储当前节点的图片对象 {{orig, safe}}
         let showcaseStartIndex = 0;
 
         const treeEl = document.getElementById('category-tree');
@@ -252,17 +266,13 @@ html = f"""<!DOCTYPE html>
         const prevBtn = document.getElementById('prev-showcase');
         const nextBtn = document.getElementById('next-showcase');
 
-        function removeExtension(filename) {{
-            return filename.replace(/\\.[^/.]+$/, '');
-        }}
-
-        // 关键修改：对路径各部分进行URL编码，确保中文等特殊字符在GitHub Pages上正常工作
-        function getThumbPath(folder, imgName) {{
-            const baseName = removeExtension(imgName);
-            // 将文件夹路径按 '/' 分割，对每个部分编码后重新组合
+        // 获取缩略图路径（安全文件名已经不含空格）
+        function getThumbPath(folder, safeBase) {{
+            // 对文件夹路径各部分编码
             const encodedFolder = folder.split('/').map(part => encodeURIComponent(part)).join('/');
-            const encodedBaseName = encodeURIComponent(baseName);
-            return `{THUMB_FOLDER_NAME}/${{encodedFolder}}/${{encodedBaseName}}.webp`;
+            // 安全文件名不需要再编码（已经不含特殊字符），但为了保险，仍编码一次
+            const encodedSafe = encodeURIComponent(safeBase);
+            return `{1}/${{encodedFolder}}/${{encodedSafe}}.webp`;
         }}
 
         function renderAllImages() {{
@@ -275,21 +285,21 @@ html = f"""<!DOCTYPE html>
                 return;
             }}
             const folder = currentNode.rel_path;
-            for (let imgName of currentImages) {{
-                const thumbPath = getThumbPath(folder, imgName);
-                const displayName = removeExtension(imgName);
+            for (let img of currentImages) {{
+                const thumbPath = getThumbPath(folder, img.safe);
+                const displayName = img.orig.replace(/\\.[^/.]+$/, ''); // 去掉扩展名显示
 
                 const itemDiv = document.createElement('div');
                 itemDiv.className = 'gallery-item';
 
-                const img = document.createElement('img');
-                img.src = thumbPath;
-                img.alt = displayName;
+                const imgEl = document.createElement('img');
+                imgEl.src = thumbPath;
+                imgEl.alt = displayName;
 
                 const nameSpan = document.createElement('span');
                 nameSpan.textContent = displayName;
 
-                itemDiv.appendChild(img);
+                itemDiv.appendChild(imgEl);
                 itemDiv.appendChild(nameSpan);
                 galleryGridEl.appendChild(itemDiv);
             }}
@@ -367,8 +377,7 @@ html = f"""<!DOCTYPE html>
         }}
 
         function updateShowcase() {{
-            const images = currentImages;
-            const total = images.length;
+            const total = currentImages.length;
             showcaseImagesEl.innerHTML = '';
 
             if (total === 0) {{
@@ -384,11 +393,11 @@ html = f"""<!DOCTYPE html>
                 indices.push(idx);
             }}
 
+            const folder = currentNode.rel_path;
             indices.forEach(idx => {{
-                const imgName = images[idx];
-                const folder = currentNode.rel_path;
-                const thumbPath = getThumbPath(folder, imgName);
-                const displayName = removeExtension(imgName);
+                const img = currentImages[idx];
+                const thumbPath = getThumbPath(folder, img.safe);
+                const displayName = img.orig.replace(/\\.[^/.]+$/, '');
                 const div = document.createElement('div');
                 div.className = 'showcase-item';
                 div.innerHTML = `<img src="${{thumbPath}}" alt="${{displayName}}" loading="lazy"><p>${{displayName}}</p>`;
@@ -446,18 +455,21 @@ html = f"""<!DOCTYPE html>
 </html>
 """
 
+# 替换占位符：{0} -> tree_json, {1} -> THUMB_FOLDER_NAME, {2} -> TITLE
+html = html.format(tree_json, THUMB_FOLDER_NAME, TITLE)
+
 with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
     f.write(html)
 
 print(f"✅ 相册生成成功！文件名为：{OUTPUT_FILE}")
 print(f"🖼️ 缩略图目录：{THUMB_ROOT}")
-print(f"📱 所有图片一次性显示完毕，无滚动加载。")
 print("🍰 已应用烘焙店风格配色，温馨舒适。")
-print("🌐 已对中文路径进行URL编码，确保GitHub Pages正常显示。")
+print("🌐 已优化文件名（空格转下划线），确保 GitHub Pages 正常加载。")
 print("\n📦 部署提示：")
 print("1. 将以下内容上传到 GitHub 仓库的根目录（与 index.html 同级）：")
 print(f"   - {OUTPUT_FILE}")
 print(f"   - {THUMB_FOLDER_NAME}/ 文件夹（包含所有缩略图）")
 print("2. 确保文件夹名和文件名的大小写与本地完全一致（GitHub Pages 区分大小写）。")
-print("3. 在仓库设置中启用 GitHub Pages，分支选择 main（或 master），根目录。")
-print("4. 访问 https://你的用户名.github.io/仓库名/ 即可查看。")
+print("3. 检查 .gitignore 文件，确保没有忽略 __suolve__ 文件夹。")
+print("4. 在仓库设置中启用 GitHub Pages，分支选择 main（或 master），根目录。")
+print("5. 访问 https://你的用户名.github.io/仓库名/ 即可查看。")
