@@ -116,9 +116,13 @@
             return filename.replace(/\.[^/.]+$/, '');
         }
 
+        // 关键修改：对路径各部分进行URL编码，确保中文等特殊字符在GitHub Pages上正常工作
         function getThumbPath(folder, imgName) {
             const baseName = removeExtension(imgName);
-            return `__suolve__/${folder}/${baseName}.webp`;
+            // 将文件夹路径按 '/' 分割，对每个部分编码后重新组合
+            const encodedFolder = folder.split('/').map(part => encodeURIComponent(part)).join('/');
+            const encodedBaseName = encodeURIComponent(baseName);
+            return `__suolve__/${encodedFolder}/${encodedBaseName}.webp`;
         }
 
         function renderAllImages() {

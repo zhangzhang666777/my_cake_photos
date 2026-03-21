@@ -60,7 +60,7 @@ def collect_all_images(root_path):
     """递归收集所有图片文件，返回列表 [(完整路径, 相对路径), ...]"""
     images = []
     for dirpath, dirnames, filenames in os.walk(root_path):
-        # 跳过 __thumbs__ 目录
+        # 跳过缩略图目录
         dirnames[:] = [d for d in dirnames if d != '__suolve__']
         for f in filenames:
             if f.lower().endswith(IMAGE_EXTENSIONS):
@@ -135,6 +135,9 @@ tree = build_tree_from_images(all_images)
 tree_json = json.dumps(tree, ensure_ascii=False)
 
 # ==================== 生成HTML ====================
+# 缩略图文件夹名（用于前端）
+THUMB_FOLDER_NAME = os.path.basename(THUMB_ROOT)
+
 html = f"""<!DOCTYPE html>
 <html>
 <head>
@@ -253,9 +256,13 @@ html = f"""<!DOCTYPE html>
             return filename.replace(/\\.[^/.]+$/, '');
         }}
 
+        // 关键修改：对路径各部分进行URL编码，确保中文等特殊字符在GitHub Pages上正常工作
         function getThumbPath(folder, imgName) {{
             const baseName = removeExtension(imgName);
-            return `__suolve__/${{folder}}/${{baseName}}.webp`;
+            // 将文件夹路径按 '/' 分割，对每个部分编码后重新组合
+            const encodedFolder = folder.split('/').map(part => encodeURIComponent(part)).join('/');
+            const encodedBaseName = encodeURIComponent(baseName);
+            return `{THUMB_FOLDER_NAME}/${{encodedFolder}}/${{encodedBaseName}}.webp`;
         }}
 
         function renderAllImages() {{
@@ -443,7 +450,14 @@ with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
     f.write(html)
 
 print(f"✅ 相册生成成功！文件名为：{OUTPUT_FILE}")
-print(f"🖼️ 缩略图目录结构与原照片完全一致，位于 {THUMB_ROOT}")
+print(f"🖼️ 缩略图目录：{THUMB_ROOT}")
 print(f"📱 所有图片一次性显示完毕，无滚动加载。")
 print("🍰 已应用烘焙店风格配色，温馨舒适。")
-print("💡 提示：现在只需上传 index.html 和 __thumbs__ 文件夹即可，GitHub 仓库大小将远低于 50MB。")
+print("🌐 已对中文路径进行URL编码，确保GitHub Pages正常显示。")
+print("\n📦 部署提示：")
+print("1. 将以下内容上传到 GitHub 仓库的根目录（与 index.html 同级）：")
+print(f"   - {OUTPUT_FILE}")
+print(f"   - {THUMB_FOLDER_NAME}/ 文件夹（包含所有缩略图）")
+print("2. 确保文件夹名和文件名的大小写与本地完全一致（GitHub Pages 区分大小写）。")
+print("3. 在仓库设置中启用 GitHub Pages，分支选择 main（或 master），根目录。")
+print("4. 访问 https://你的用户名.github.io/仓库名/ 即可查看。")
